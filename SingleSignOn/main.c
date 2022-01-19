@@ -24,6 +24,7 @@ struct public_key_IDP {
     element_t omega;
     // 为了兼容，可以暂时留着它
     struct h_i_node* virtual_head;
+    // 所有的h_i均来自群G1
     element_t* h_vector;
 
     int total_num_of_h_i;
@@ -57,6 +58,10 @@ struct sigma {
     element_t z_beta;
 
     element_t* z_i_hidden;
+
+    // 缓存起来，用于加速
+    // 最好保存为全局变量？
+    element_t middle_res;
 };
 
 char D224_param[1347] = "type d \
@@ -307,13 +312,136 @@ int is_hidden(char* select_vector, int loc) {
     return (select_vector[loc]&0x01)==1;
 }
 
-struct sigma* compute_sigma {
-    sigma* sig = (sigma*)malloc(sizeof(sigma));
-    memset(sig, 0, sizeof(sigma));
+struct sigma* compute_sigma(struct sigma_c* signature_c, struct public_key_IDP* pk_IDP,
+    element_t* m_vector, char* select_vector) {
+    struct sigma* signature = (struct sigma*)malloc(sizeof(struct sigma));
+    memset(signature, 0, sizeof(struct sigma));
 
+    // 生成此处对应的签名。
+
+    element_t r;
+    element_t r_plus;
+    element_init_Zr(r, *pk_IDP->pair);
+    element_init_Zr(r_plus, *pk_IDP->pair);
+    element_random(r);
+    element_random(r_plus);
+
+    // A_plus \in G1  
+    // A_ba \in G1
+    element_init_G1(signature->A_plus, *pk_IDP->pair);
+    element_init_G1(signature->A_ba, *pk_IDP->pair);
+
+    // 计算A_plus
+    element_pow_zn(signature->A_plus, signature_c->A, r);
+
+    // 计算A_ba
+    //////// 首先计算中间变量，即那个一群连乘 ////////
+    element_t res;
+    element_init_G1(res, *pk_IDP->pair);
+
+    // 涉及到一系列参数的计算，大部分是连乘
+    // element_mul(element_t n, element_t a, element_t b) n=ab
+    // element_pow_zn(element_t x, element_t a, element_t n) x=a^n
+
+    element_t parcel;
+    element_init_G1(parcel, *pk_IDP->pair);
+
+    element_pow_zn(parcel, pk_IDP->h_vector[0], signature_c->s);
+    element_set(res, parcel);
+
+    int N = pk_IDP->total_num_of_h_i;
+    for(int i=1; i<N; i++) {
+        element_pow_zn(parcel, pk_IDP->h_vector[i], m_vector[i]);
+        element_mul(res, res, parcel);
+    }
+
+    element_mul(res, res, pk_IDP->g1);
+
+    element_init_G1(signature->middle_res, *pk_IDP->pair);
+
+    element_set(signature->middle_res, res);
+
+    //////// 计算A_ba的下一步骤 ////////
+
+    element_set(res, signature->A_plus);
+    element_set(parcel, signature_c->x);
+    element_neg(parcel, parcel); // -x
+    element_pow_zn(res, res, parcel);
+    //////// 重要的中间变量，连乘上套了一个r次方 ////////
+    element_pow_zn(signature->middle_res, signature->middle_res, r);
+
+    element_mul(signature->A_ba, res, signature->middle_res);
+
+
+    // 下面计算d
+    element_init_G1(signature->d, *pk_IDP->pair);
+    element_pow_zn(res, pk_IDP->h_vector[0], r_plus);
+    element_mul(signature->d, signature->middle_res, res);
+
+    // 可以试着验证一下下等式
+    //////// A_ba = (A')^\gamma ////////
+
+    // 又选取了一大堆变量，用于后文的计算
+    element_t r_x;
+    element_t r_r;
+    element_t r_alpha;
+    element_t r_beta;
+    element_t* r_var = (element_t*)malloc(N*sizeof(element_t));
+
+    element_init_Zr(r_x, *pk_IDP->pair);
+    element_random(r_x);
+    element_init_Zr(r_r, *pk_IDP->pair);
+    element_random(r_r);
+    element_init_Zr(r_alpha, *pk_IDP->pair);
+    element_random(r_alpha);
+    element_init_Zr(r_beta, *pk_IDP->pair);
+    element_random(r_beta);
+
+    for(int i=0; i<N; i++) {
+        if(is_hidden(select_vector, i)) {
+            element_init_Zr(r_var[i], *pk_IDP->pair);
+            element_random(r_var[i]);
+        }
+    }
+    element_t R1;element_init_G1(R1, *pk_IDP->pair);
+    element_t R2;element_init_G1(R2, *pk_IDP->pair);
+
+    // 计算R1
+    element_set(res, r_x);
+    element_neg(res, res); // -r_x
+    element_pow_zn(res, signature->A_plus, res);
+    element_set(R1, res);
+    element_set(res, r_r);
+    element_pow_zn(res, pk_IDP->h_vector[0], res);
+    element_mul(R1, res, R1); // 自己乘自己
+
+    // 计算R2
+    element_set(res, r_alpha);
+    element_pow_zn(res, signature->d, res);
+    element_set(R2, res);
+
+    element_set(res, r_beta);
+    element_neg(res, res);
+    element_pow_zn(res, pk_IDP->h_vector[0], res);
+    element_mul(R2, R2, res);
+
+    element_set1(res);
+    for(int i=0; i<N; i++) {
+        // 如果是被隐藏的内容
+        if(is_hidden(select_vector, i)) {
+            // parcel是前面声明过得中间变量
+            element_set(parcel, r_var[i]);
+            element_pow_zn(parcel, pk_IDP->h_vector[i], r_var[i]);
+            element_mul(res, res, parcel);
+        }
+    }
+
+    element_mul(R2, R2, res);
+
+    // 计算 alpha 和 beta
     
 
-    return sig;
+    return signature;
 }
 int main() {
 
