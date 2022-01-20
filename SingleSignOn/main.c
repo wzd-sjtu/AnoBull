@@ -5,7 +5,10 @@
 #include <string.h>
 #include <openssl/sha.h>
 
-// describe the chain
+//////////////////////////////  程序重要前提，h从0开始下标，m从1开始下标 //////////////////////
+
+
+// designature_cribe the chain
 struct h_i_node {
     int index;
     struct h_i_node* next;
@@ -21,19 +24,24 @@ struct m_i_node {
 // 公钥of IDP
 // to some fixed space yes!
 struct public_key_IDP {
+    // G2
     element_t omega;
     // 为了兼容，可以暂时留着它
     struct h_i_node* virtual_head;
     // 所有的h_i均来自群G1
+    // G1
     element_t* h_vector;
 
     int total_num_of_h_i;
     pairing_t* pair;
+    // G1
     element_t g1;
+    // G2
     element_t g2;
 };
 
 struct secret_key_IDP {
+    // Z_p
     element_t gamma;
 };
 
@@ -46,12 +54,18 @@ struct sigma_c {
 };
 
 struct sigma {
+    // G1
     element_t A_plus;
     element_t A_ba;
 
+    // G1
     element_t d;
+
+    // R1 and R2 also in G1
+    // c还是取到Z_p中比较合理？
     element_t c;
     
+    // Z_p
     element_t z_x;
     element_t z_r;
     element_t z_alpha;
@@ -88,6 +102,7 @@ pairing_t* init_space(char* curve_name) {
         // 经测试，d224椭圆曲线参数数组大小为1346，故将大小初始化为1347byte，即为char param[1347]
 
         // pointer总是需要初始化一下
+        // 总是要malloc一下的了
         pairing_t* tmp = malloc(sizeof(pairing_t));
         pairing_init_set_buf(*tmp, D224_param, count);
         return tmp;
@@ -98,6 +113,8 @@ pairing_t* init_space(char* curve_name) {
 // 在init开始之前，就要完成基本的malloc了
 struct secret_key_IDP* init_IDP_secret_key(pairing_t* pairing) {
     struct secret_key_IDP* tmp = (struct secret_key_IDP*)malloc(sizeof(struct secret_key_IDP));
+    
+    // 是否需要刷0？需要的
     memset(tmp, 0, sizeof(struct secret_key_IDP));
 
     element_t gamma;
@@ -209,11 +226,11 @@ struct public_key_IDP* init_IDP_public_key(pairing_t* pairing, int N, struct sec
     pk_IDP->pair = pairing;
 
     // 数值赋值，为公钥做计算准备
-    element_t* gamma = &sk_IDP->gamma;
+    // element_t* gamma = &sk_IDP->gamma;
     // ==
     element_t omega;
     element_init_G2(omega, *pairing);
-    element_pow_zn(omega, g2, *gamma);
+    element_pow_zn(omega, g2, sk_IDP->gamma);
 
     element_set(pk_IDP->omega, omega); // 内容赋值, pk_IDP->omega = omega;
 
@@ -230,7 +247,6 @@ struct public_key_IDP* init_IDP_public_key(pairing_t* pairing, int N, struct sec
 
     element_clear(g1);
     element_clear(g2);
-    // 写成指针，不需要额外的修改，极大地减小内存占用
     element_clear(omega);
 
     return pk_IDP;
@@ -261,14 +277,15 @@ struct m_i_node* del_get_user_info(int N, pairing_t* pairing) {
     return user_virtual_head;
 }
 
-struct sigma_c* compute_sigma_c(element_t* m_vector, struct public_key_IDP* pk_IDP, struct secret_key_IDP* sk_IDP) {
+struct sigma_c* compute_sigma_c(element_t* m_vector, struct public_key_IDP* pk_IDP, \
+ struct secret_key_IDP* sk_IDP) {
     // 计算初始颁发的匿名凭证
-    struct sigma_c* sc = (struct sigma_c*)malloc(sizeof(struct sigma_c));
-    memset(sc, 0, sizeof(struct sigma_c));
+    struct sigma_c* signature_c = (struct sigma_c*)malloc(sizeof(struct sigma_c));
+    memset(signature_c, 0, sizeof(struct sigma_c));
 
-    element_init_Zr(sc->x, *pk_IDP->pair);element_random(sc->x);
-    element_init_Zr(sc->s, *pk_IDP->pair);element_random(sc->s);
-    element_init_G1(sc->A, *pk_IDP->pair);
+    element_init_Zr(signature_c->x, *pk_IDP->pair);element_random(signature_c->x);
+    element_init_Zr(signature_c->s, *pk_IDP->pair);element_random(signature_c->s);
+    element_init_G1(signature_c->A, *pk_IDP->pair);
 
     // 计算A
     element_t res;
@@ -281,7 +298,7 @@ struct sigma_c* compute_sigma_c(element_t* m_vector, struct public_key_IDP* pk_I
     element_t parcel;
     element_init_G1(parcel, *pk_IDP->pair);
 
-    element_pow_zn(parcel, pk_IDP->h_vector[0], sc->s);
+    element_pow_zn(parcel, pk_IDP->h_vector[0], signature_c->s);
     element_set(res, parcel);
 
     int N = pk_IDP->total_num_of_h_i;
@@ -294,10 +311,11 @@ struct sigma_c* compute_sigma_c(element_t* m_vector, struct public_key_IDP* pk_I
 
     element_t exponent_res;
     element_init_Zr(exponent_res, *pk_IDP->pair);
-    element_add(exponent_res, sk_IDP->gamma, sc->x);
+    element_add(exponent_res, sk_IDP->gamma, signature_c->x);
 
     element_t one_expo;
     element_init_Zr(one_expo, *pk_IDP->pair);
+    element_set1(one_expo); // 做经典的除法
 
     // void element_div(element_t n, element_t a, element_t b)
     element_div(exponent_res, one_expo, exponent_res);
@@ -305,19 +323,24 @@ struct sigma_c* compute_sigma_c(element_t* m_vector, struct public_key_IDP* pk_I
     // 最后再做指数运算
     element_pow_zn(res, res, exponent_res);
 
-    element_set(sc->A, res);
+    element_set(signature_c->A, res);
 
+    element_clear(res);
+    element_clear(parcel);
     element_clear(exponent_res);
     element_clear(one_expo);
 
-    return sc;
+    return signature_c;
 }
 // compile code:
 // gcc main.c -L. -lpbc -lgmp -lcrypto
 
 // 查看此index是否在被选择之列表
 int is_hidden(char* select_vector, int loc) {
-    return (select_vector[loc]&0x01)==1;
+     if((select_vector[loc]&0x01)==1) {
+         return 1;
+     }
+     else return 0;
 }
 
 void hash_SHA256(unsigned char* data_buffer, int length, unsigned char result[]) {
@@ -330,6 +353,7 @@ void hash_SHA256(unsigned char* data_buffer, int length, unsigned char result[])
 }
 struct sigma* compute_sigma(struct sigma_c* signature_c, struct public_key_IDP* pk_IDP,
     element_t* m_vector, char* select_vector) {
+
     struct sigma* signature = (struct sigma*)malloc(sizeof(struct sigma));
     memset(signature, 0, sizeof(struct sigma));
 
@@ -342,6 +366,7 @@ struct sigma* compute_sigma(struct sigma_c* signature_c, struct public_key_IDP* 
     element_random(r);
     element_random(r_plus);
 
+    
     // A_plus \in G1  
     // A_ba \in G1
     element_init_G1(signature->A_plus, *pk_IDP->pair);
@@ -374,8 +399,10 @@ struct sigma* compute_sigma(struct sigma_c* signature_c, struct public_key_IDP* 
     element_mul(res, res, pk_IDP->g1);
 
     element_init_G1(signature->middle_res, *pk_IDP->pair);
-
+    // middle res包括 g1 h_0^s parcel式子
     element_set(signature->middle_res, res);
+    //////// 重要的中间变量，连乘上套了一个r次方 ////////
+    element_pow_zn(signature->middle_res, signature->middle_res, r);
 
     //////// 计算A_ba的下一步骤 ////////
 
@@ -383,12 +410,11 @@ struct sigma* compute_sigma(struct sigma_c* signature_c, struct public_key_IDP* 
     element_set(parcel, signature_c->x);
     element_neg(parcel, parcel); // -x
     element_pow_zn(res, res, parcel);
-    //////// 重要的中间变量，连乘上套了一个r次方 ////////
-    element_pow_zn(signature->middle_res, signature->middle_res, r);
-
+    
     element_mul(signature->A_ba, res, signature->middle_res);
 
 
+    
     // 下面计算d
     element_init_G1(signature->d, *pk_IDP->pair);
     element_pow_zn(res, pk_IDP->h_vector[0], r_plus);
@@ -414,48 +440,63 @@ struct sigma* compute_sigma(struct sigma_c* signature_c, struct public_key_IDP* 
     element_random(r_beta);
 
     for(int i=0; i<N; i++) {
-        if(is_hidden(select_vector, i)) {
-            element_init_Zr(r_var[i], *pk_IDP->pair);
-            element_random(r_var[i]);
-        }
+        element_init_Zr(r_var[i], *pk_IDP->pair);
+        element_random(r_var[i]);
     }
+
     element_t R1;element_init_G1(R1, *pk_IDP->pair);
     element_t R2;element_init_G1(R2, *pk_IDP->pair);
 
-    // 计算R1
+    
+    // 计算R1  res与parcel均为G1群
+    // 下文需要改换R1的群
+
+    element_clear(res);
+    element_init_Zr(res, *pk_IDP->pair);
+    element_clear(parcel);
+    element_init_G1(parcel, *pk_IDP->pair);
+
     element_set(res, r_x);
     element_neg(res, res); // -r_x
-    element_pow_zn(res, signature->A_plus, res);
-    element_set(R1, res);
+    element_pow_zn(parcel, signature->A_plus, res);
+    element_set(R1, parcel);
+
     element_set(res, r_r);
-    element_pow_zn(res, pk_IDP->h_vector[0], res);
-    element_mul(R1, res, R1); // 自己乘自己
+    element_pow_zn(parcel, pk_IDP->h_vector[0], res);
+    element_mul(R1, parcel, R1); // 自己乘自己
 
     // 计算R2
     element_set(res, r_alpha);
-    element_pow_zn(res, signature->d, res);
-    element_set(R2, res);
+    element_pow_zn(parcel, signature->d, res);
+    element_set(R2, parcel);
 
     element_set(res, r_beta);
     element_neg(res, res);
-    element_pow_zn(res, pk_IDP->h_vector[0], res);
-    element_mul(R2, R2, res);
+    element_pow_zn(parcel, pk_IDP->h_vector[0], res);
+    element_mul(R2, R2, parcel);
 
-    element_set1(res);
+    // 出现了many bugs，群的域弄不清楚了
+    
+    element_set1(parcel);
+    element_t mid_tmp;element_init_G1(mid_tmp, *pk_IDP->pair);
+    // 此处i可以从0开始，对的
     for(int i=0; i<N; i++) {
         // 如果是被隐藏的内容
         if(is_hidden(select_vector, i)) {
             // parcel是前面声明过得中间变量
-            element_set(parcel, r_var[i]);
-            element_pow_zn(parcel, pk_IDP->h_vector[i], r_var[i]);
-            element_mul(res, res, parcel);
+            element_pow_zn(mid_tmp, pk_IDP->h_vector[i], r_var[i]);
+            element_mul(parcel, parcel, mid_tmp);
         }
     }
 
+    // 32
     // how to compute the H? I have no idea.
 
-    element_mul(R2, R2, res);
+    element_mul(R2, R2, parcel);
 
+
+    
+    // parcel G1    res Z_r  mid_tmp G1
     // 计算 alpha 和 beta
     element_t alpha;
     element_t beta;
@@ -469,12 +510,11 @@ struct sigma* compute_sigma(struct sigma_c* signature_c, struct public_key_IDP* 
 
     // 计算c，也就是hash对
     // hash函数，仅仅适用于此处？对的了呢
-    /*
-    关于需要继续使用的API如下：
-    int element_length_in_bytes(element_t e)
-    int element_to_bytes(unsigned char *data, element_t e)
-    */
+
     // 进行了具体的底层byte安排
+    // 以下是Hash的过程
+
+    
     int H_length = 0;
     int A_plus_length = 0, A_ba_length = 0, d_length = 0, R1_length = 0, R2_length = 0;
 
@@ -508,6 +548,8 @@ struct sigma* compute_sigma(struct sigma_c* signature_c, struct public_key_IDP* 
     // printf(result);
     // 成功得到暂时的结果，需要反向映射回去
     element_init_Zr(signature->c, *pk_IDP->pair);
+
+    //////////// 重要的哈希函数位置  写注释提醒自己 ////////////
     element_from_hash(signature->c, result, 32); // sha256's length is always 32
 
     
@@ -531,9 +573,29 @@ struct sigma* compute_sigma(struct sigma_c* signature_c, struct public_key_IDP* 
     element_add(signature->z_beta, signature->z_beta, r_beta);
     // z_i
     
-    signature->z_i_hidden = (element_t *)malloc(pk_IDP->total_num_of_h_i*sizeof(element_t));
-    for(int i=0; i<pk_IDP->total_num_of_h_i; i++) {
+     // 是否需要选择向量呢？暂时未知
+
+    // 堆空间发生了溢出
+    // 需要释放一切没必要的资源
+    element_clear(R1);
+    element_clear(R2);
+    element_clear(r);
+    element_clear(r_plus);
+
+    element_clear(res);
+    element_clear(parcel);
+    element_clear(mid_tmp);
+
+    element_clear(r_x);
+    element_clear(r_r);
+    element_clear(r_alpha);
+    element_clear(r_beta);
+
+    signature->z_i_hidden = (element_t *)malloc(N*sizeof(element_t));
+    for(int i=0; i<N; i++) {
+        // 不论如何，采用全部初始化的原则
         element_init_Zr(signature->z_i_hidden[i], *pk_IDP->pair);
+        
         if(is_hidden(select_vector, i)) {
             // 如果是被隐藏的element，那么初始化并且赋值
             element_mul(signature->z_i_hidden[i], signature->c, m_vector[i]);
@@ -542,33 +604,16 @@ struct sigma* compute_sigma(struct sigma_c* signature_c, struct public_key_IDP* 
     }
     
     // 至此，signature完全结束，返回签名结果
-    // 是否需要选择向量呢？暂时未知
-
-    // 堆空间发生了溢出
-    // 需要释放一切没必要的资源
-    element_clear(R1);
-    element_clear(R2);
-    element_clear(r);
-    element_clear(r_plus);
-    element_clear(res);
-    element_clear(parcel);
-    element_clear(r_x);
-    element_clear(r_r);
-    element_clear(r_alpha);
-    element_clear(r_beta);
-    // 这样存太浪费空间了
-    /*
     for(int i=0; i<N; i++) {
-        if(is_hidden(select_vector, i)) {
-            element_clear(r_var[i]);
-        }
-    }*/
+        element_clear(r_var[i]); // all clean is ok！
+    }
     // 直接free即可
     free(r_var);
-
     return signature;
 }
 
+
+// RP_verify(signature, m_vector, select_vector, pk_IDP);
 
 int RP_verify(struct sigma* signature, element_t* m_vector, char* select_vector,
     struct public_key_IDP* pk_IDP) {
@@ -579,7 +624,7 @@ int RP_verify(struct sigma* signature, element_t* m_vector, char* select_vector,
     element_t R2;element_init_G1(R2, *pk_IDP->pair);
 
     element_t res;element_init_Zr(res, *pk_IDP->pair);
-    element_t parcel;element_init_Zr(parcel, *pk_IDP->pair);
+    element_t parcel;element_init_G1(parcel, *pk_IDP->pair);
     element_t res_in_G1;element_init_G1(res_in_G1, *pk_IDP->pair);
 
     
@@ -587,8 +632,8 @@ int RP_verify(struct sigma* signature, element_t* m_vector, char* select_vector,
     element_neg(res, signature->z_x);
     element_pow_zn(R1, signature->A_plus, res);
 
-    element_pow_zn(res, pk_IDP->h_vector[0], signature->z_r);
-    element_mul(R1, R1, res); // 将中间变量乘上去即可得之
+    element_pow_zn(res_in_G1, pk_IDP->h_vector[0], signature->z_r);
+    element_mul(R1, R1, res_in_G1); // 将中间变量乘上去即可得之
 
     element_neg(res, signature->c);
     element_div(res_in_G1, signature->A_ba, signature->d);
@@ -596,14 +641,16 @@ int RP_verify(struct sigma* signature, element_t* m_vector, char* select_vector,
 
     element_mul(R1, R1, res_in_G1);
 
-    /*
+    
     // 恢复R2
-
     
     // 首先要将R2存入适当的群内
+    element_clear(res);
+    element_init_G1(res, *pk_IDP->pair);
+
     element_set(res_in_G1, pk_IDP->g1);
     element_set1(res);
-    for(int i=0; i<pk_IDP->total_num_of_h_i; i++) {
+    for(int i=1; i<pk_IDP->total_num_of_h_i; i++) {
         if(!is_hidden(select_vector, i)) {
             element_pow_zn(parcel, pk_IDP->h_vector[i], m_vector[i]);
             element_mul(res, res, parcel);
@@ -611,25 +658,36 @@ int RP_verify(struct sigma* signature, element_t* m_vector, char* select_vector,
     }
     element_mul(res_in_G1, res_in_G1, res);
 
+    element_clear(res);
+    element_init_Zr(res, *pk_IDP->pair);
+    
     element_neg(res, signature->c);
     element_pow_zn(res_in_G1, res_in_G1, res);
 
     element_set(R2, res_in_G1);
 
     element_neg(res, signature->z_beta);
-    element_mul(R2, pk_IDP->h_vector[0], res);
+    element_pow_zn(res_in_G1, pk_IDP->h_vector[0], res);
+    element_mul(R2, R2, res_in_G1);
     
-    element_pow_zn(res, signature->d, signature->z_alpha);
-    element_mul(R2, R2, res);
+    element_pow_zn(res_in_G1, signature->d, signature->z_alpha);
+    element_mul(R2, R2, res_in_G1);
 
     // 进入连乘周期
+    element_clear(res);
+    element_init_G1(res, *pk_IDP->pair);
+
+    element_clear(parcel);
+    element_init_Zr(res, *pk_IDP->pair);
+
+    // res均设置为G1群，parcel设置为Zr群
     element_set1(res);
     for(int i=0; i<pk_IDP->total_num_of_h_i; i++) {
         if(is_hidden(select_vector, i)) {
-            printf("I am happy!\n");
+            // printf("I am happy!\n");
             element_neg(parcel, signature->z_i_hidden[i]);
-            element_pow_zn(parcel, pk_IDP->h_vector[i], parcel);
-            element_mul(res, res, parcel);
+            element_pow_zn(res_in_G1, pk_IDP->h_vector[i], parcel);
+            element_mul(res, res, res_in_G1);
         }
     }
     element_mul(R2, R2, res);
@@ -710,8 +768,6 @@ int RP_verify(struct sigma* signature, element_t* m_vector, char* select_vector,
     element_clear(temp2);
 
     free(data_buffer);
-
-    */
     return 1;
 }
 
@@ -753,6 +809,42 @@ void clear_all(struct public_key_IDP* pk_IDP, struct secret_key_IDP* sk_IDP, \
     return;
 }
 
+void small_version_clear_all(struct public_key_IDP* pk_IDP, struct secret_key_IDP* sk_IDP, \
+    struct sigma_c* signature_c, struct sigma* signature) {
+    int N = pk_IDP->total_num_of_h_i;
+
+    element_clear(pk_IDP->omega);
+    for(int i=0; i<N; i++) {
+        element_clear(pk_IDP->h_vector[i]);
+    }
+    free(pk_IDP->h_vector);
+    pairing_clear(*pk_IDP->pair);
+    element_clear(pk_IDP->g1);
+    element_clear(pk_IDP->g2);
+    element_clear(sk_IDP->gamma);
+
+    
+    element_clear(signature_c->x);
+    element_clear(signature_c->s);
+    element_clear(signature_c->A);
+
+    
+    element_clear(signature->A_plus);
+    element_clear(signature->A_ba);
+    element_clear(signature->d);
+    element_clear(signature->c);
+    element_clear(signature->z_x);
+    element_clear(signature->z_r);
+    element_clear(signature->z_alpha);
+    element_clear(signature->z_beta);
+    for(int i=0; i<N; i++) {
+        element_clear(signature->z_i_hidden[i]);
+    }
+    free(signature->z_i_hidden);
+    element_clear(signature->middle_res);
+    
+    return;
+}
 int main() {
 
     char* name = "D224";
@@ -764,7 +856,7 @@ int main() {
     sk_IDP = init_IDP_secret_key(pair_use);
 
     // 生成IDP公钥，需要一个参数N
-    int N = 32;
+    int N = 6;
     struct public_key_IDP* pk_IDP = NULL;
     pk_IDP = init_IDP_public_key(pair_use, N, sk_IDP);
 
@@ -782,15 +874,16 @@ int main() {
     // 下面是message？difficult to understand.
 
     // element_t的大小不是固定的，所以会出问题？
+    // m需要从1开始，这是要着重注意的点，让人难以理解ing
+
     element_t* m_vector = (element_t*)malloc(N*sizeof(element_t));
-    for(int i=1; i<N; i++) {
+    for(int i=0; i<N; i++) {
         element_init_Zr(m_vector[i], *pair_use);
         element_random(m_vector[i]);
     }
 
     // 计算初始签名 sigma_c
     struct sigma_c* sigma_c_user = compute_sigma_c(m_vector, pk_IDP, sk_IDP);
-
     
     // successfully完成了初始版本的签名，令人费解？
     // 用户消息一定是N个吗？这是以后才需要考虑的问题
@@ -801,14 +894,15 @@ int main() {
     memset(select_vector, 0, N*sizeof(char)); // 是否要全部刷0？有时是无必要的
     
     select_vector[4] = 1;
-    select_vector[7] = 1;
-    select_vector[30] = 1;
+    select_vector[3] = 1;
+    select_vector[1] = 1;
 
     // 完成complete？
 
     struct sigma* signature;
     signature = compute_sigma(sigma_c_user, pk_IDP, m_vector, select_vector);
-    
+    if(pk_IDP!=NULL) printf("\n successfully! \n");
+
     
     RP_verify(signature, m_vector, select_vector, pk_IDP);
 
@@ -817,16 +911,21 @@ int main() {
 
 
     // 在free之前，要进行彻底的clear，防止堆内存溢出
-    // 不能只靠schedule来清理内存，对滴
+    // 不能只靠signature_chedule来清理内存，对滴
 
 
-    /*
+    
     // 这些都是什么玄学错误？
-    clear_all(pk_IDP, sk_IDP, sigma_c_user, signature);
+    // clear_all(pk_IDP, sk_IDP, sigma_c_user, signature);
+    
+    // small_version_clear_all(pk_IDP, sk_IDP, sigma_c_user, signature);
+
     
     pairing_clear(*pair_use);
     free(sk_IDP);
     free(pk_IDP);
+    free(sigma_c_user);
+    free(signature);
 
     for(int i=0; i<N; i++) {
         element_clear(m_vector[i]);
@@ -834,11 +933,8 @@ int main() {
     free(m_vector);
 
     free(select_vector);
-
-    free(sigma_c_user);
-    free(signature);
     
-    */
+    
 
     return 0;
 }
