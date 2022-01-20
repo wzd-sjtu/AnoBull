@@ -54,13 +54,15 @@ struct sigma {
     
     element_t z_x;
     element_t z_r;
-    element_t z_appha;
+    element_t z_alpha;
     element_t z_beta;
 
     element_t* z_i_hidden;
 
     // 缓存起来，用于加速
     // 最好保存为全局变量？
+    //////// 重要的中间变量，连乘上套了一个r次方 ////////
+
     element_t middle_res;
 };
 
@@ -108,6 +110,7 @@ struct secret_key_IDP* init_IDP_secret_key(pairing_t* pairing) {
     // tmp->gamma = gamma equation is always ok.
     element_set(tmp->gamma, gamma);
 
+    element_clear(gamma);
     return tmp;
 }
 
@@ -200,10 +203,7 @@ struct public_key_IDP* init_IDP_public_key(pairing_t* pairing, int N, struct sec
     element_random(g1);
     element_random(g2);
 
-    
-    //pk_IDP->g1 = g1;
-    //pk_IDP->g2 = g2;
-    //pk_IDP->pair = pairing;
+
     element_set(pk_IDP->g1, g1);
     element_set(pk_IDP->g2, g2);
     pk_IDP->pair = pairing;
@@ -227,6 +227,11 @@ struct public_key_IDP* init_IDP_public_key(pairing_t* pairing, int N, struct sec
         element_init_G1(pk_IDP->h_vector[i], *pairing);
         element_random(pk_IDP->h_vector[i]);
     }
+
+    element_clear(g1);
+    element_clear(g2);
+    // 写成指针，不需要额外的修改，极大地减小内存占用
+    element_clear(omega);
 
     return pk_IDP;
 }
@@ -302,6 +307,9 @@ struct sigma_c* compute_sigma_c(element_t* m_vector, struct public_key_IDP* pk_I
 
     element_set(sc->A, res);
 
+    element_clear(exponent_res);
+    element_clear(one_expo);
+
     return sc;
 }
 // compile code:
@@ -312,6 +320,14 @@ int is_hidden(char* select_vector, int loc) {
     return (select_vector[loc]&0x01)==1;
 }
 
+void hash_SHA256(unsigned char* data_buffer, int length, unsigned char result[]) {
+    SHA256_CTX sha256_ctx;
+    SHA256_Init(&sha256_ctx);
+    SHA256_Update(&sha256_ctx, data_buffer, length);
+
+    SHA256_Final(result, &sha256_ctx);
+    return;
+}
 struct sigma* compute_sigma(struct sigma_c* signature_c, struct public_key_IDP* pk_IDP,
     element_t* m_vector, char* select_vector) {
     struct sigma* signature = (struct sigma*)malloc(sizeof(struct sigma));
@@ -436,13 +452,307 @@ struct sigma* compute_sigma(struct sigma_c* signature_c, struct public_key_IDP* 
         }
     }
 
+    // how to compute the H? I have no idea.
+
     element_mul(R2, R2, res);
 
     // 计算 alpha 和 beta
+    element_t alpha;
+    element_t beta;
+    element_init_Zr(alpha, *pk_IDP->pair);
+    element_init_Zr(beta, *pk_IDP->pair);
+
+    //// 取逆 ////
+    element_invert(alpha, r);
+    element_mul(beta, alpha, r_plus);
+    element_add(beta, beta, signature_c->s);
+
+    // 计算c，也就是hash对
+    // hash函数，仅仅适用于此处？对的了呢
+    /*
+    关于需要继续使用的API如下：
+    int element_length_in_bytes(element_t e)
+    int element_to_bytes(unsigned char *data, element_t e)
+    */
+    // 进行了具体的底层byte安排
+    int H_length = 0;
+    int A_plus_length = 0, A_ba_length = 0, d_length = 0, R1_length = 0, R2_length = 0;
+
+    A_plus_length = element_length_in_bytes(signature->A_plus);
+    A_ba_length = element_length_in_bytes(signature->A_ba);
+    d_length = element_length_in_bytes(signature->d);
+    R1_length = element_length_in_bytes(R1);
+    R2_length = element_length_in_bytes(R2);
+
+    H_length = A_plus_length + A_ba_length + R1_length + R2_length;
+
+    unsigned char* data_buffer = (unsigned char*)malloc(H_length*sizeof(unsigned char));
+    memset(data_buffer, 0, H_length*sizeof(unsigned char));
+    // 最后没有必要补\0
+
+    unsigned char* tmp_buffer = data_buffer;
+    element_to_bytes(tmp_buffer, signature->A_plus);
+    tmp_buffer += A_plus_length;
+    element_to_bytes(tmp_buffer, signature->A_ba);
+    tmp_buffer += A_ba_length;
+    element_to_bytes(tmp_buffer, signature->d);
+    tmp_buffer += d_length;
+    element_to_bytes(tmp_buffer, R1);
+    tmp_buffer += R1_length;
+    element_to_bytes(tmp_buffer, R2);
+    // tmp_buffer += R2_length;
+
+    // void hash_SHA256(unsigned char* data_buffer, int length, unsigned char result[])
+    unsigned char result[32] = {0};
+    hash_SHA256(data_buffer, H_length, result);
+    // printf(result);
+    // 成功得到暂时的结果，需要反向映射回去
+    element_init_Zr(signature->c, *pk_IDP->pair);
+    element_from_hash(signature->c, result, 32); // sha256's length is always 32
+
     
+    // 计算z_...
+    // 可以不对z做初始化，编译也可以通过？
+    // z_x
+    element_init_Zr(signature->z_x, *pk_IDP->pair);
+    element_mul(signature->z_x, signature->c, signature_c->x);
+    element_add(signature->z_x, signature->z_x, r_x);
+    // z_r
+    element_init_Zr(signature->z_r, *pk_IDP->pair);
+    element_mul(signature->z_r, signature->c, r_r);
+    element_add(signature->z_r, signature->z_r, r_plus);
+    // z_alpha
+    element_init_Zr(signature->z_alpha, *pk_IDP->pair);
+    element_mul(signature->z_alpha, signature->c, alpha);
+    element_add(signature->z_alpha, signature->z_alpha, r_alpha);
+    // z_beta
+    element_init_Zr(signature->z_beta, *pk_IDP->pair);
+    element_mul(signature->z_beta, signature->c, beta);
+    element_add(signature->z_beta, signature->z_beta, r_beta);
+    // z_i
+    
+    signature->z_i_hidden = (element_t *)malloc(pk_IDP->total_num_of_h_i*sizeof(element_t));
+    for(int i=0; i<pk_IDP->total_num_of_h_i; i++) {
+        element_init_Zr(signature->z_i_hidden[i], *pk_IDP->pair);
+        if(is_hidden(select_vector, i)) {
+            // 如果是被隐藏的element，那么初始化并且赋值
+            element_mul(signature->z_i_hidden[i], signature->c, m_vector[i]);
+            element_add(signature->z_i_hidden[i], signature->z_i_hidden[i], r_var[i]);
+        }
+    }
+    
+    // 至此，signature完全结束，返回签名结果
+    // 是否需要选择向量呢？暂时未知
+
+    // 堆空间发生了溢出
+    // 需要释放一切没必要的资源
+    element_clear(R1);
+    element_clear(R2);
+    element_clear(r);
+    element_clear(r_plus);
+    element_clear(res);
+    element_clear(parcel);
+    element_clear(r_x);
+    element_clear(r_r);
+    element_clear(r_alpha);
+    element_clear(r_beta);
+    // 这样存太浪费空间了
+    /*
+    for(int i=0; i<N; i++) {
+        if(is_hidden(select_vector, i)) {
+            element_clear(r_var[i]);
+        }
+    }*/
+    // 直接free即可
+    free(r_var);
 
     return signature;
 }
+
+
+int RP_verify(struct sigma* signature, element_t* m_vector, char* select_vector,
+    struct public_key_IDP* pk_IDP) {
+    
+    
+    // 恢复出R1和R2
+    element_t R1;element_init_G1(R1, *pk_IDP->pair);
+    element_t R2;element_init_G1(R2, *pk_IDP->pair);
+
+    element_t res;element_init_Zr(res, *pk_IDP->pair);
+    element_t parcel;element_init_Zr(parcel, *pk_IDP->pair);
+    element_t res_in_G1;element_init_G1(res_in_G1, *pk_IDP->pair);
+
+    
+    // 恢复R1
+    element_neg(res, signature->z_x);
+    element_pow_zn(R1, signature->A_plus, res);
+
+    element_pow_zn(res, pk_IDP->h_vector[0], signature->z_r);
+    element_mul(R1, R1, res); // 将中间变量乘上去即可得之
+
+    element_neg(res, signature->c);
+    element_div(res_in_G1, signature->A_ba, signature->d);
+    element_pow_zn(res_in_G1, res_in_G1, res);
+
+    element_mul(R1, R1, res_in_G1);
+
+    /*
+    // 恢复R2
+
+    
+    // 首先要将R2存入适当的群内
+    element_set(res_in_G1, pk_IDP->g1);
+    element_set1(res);
+    for(int i=0; i<pk_IDP->total_num_of_h_i; i++) {
+        if(!is_hidden(select_vector, i)) {
+            element_pow_zn(parcel, pk_IDP->h_vector[i], m_vector[i]);
+            element_mul(res, res, parcel);
+        }
+    }
+    element_mul(res_in_G1, res_in_G1, res);
+
+    element_neg(res, signature->c);
+    element_pow_zn(res_in_G1, res_in_G1, res);
+
+    element_set(R2, res_in_G1);
+
+    element_neg(res, signature->z_beta);
+    element_mul(R2, pk_IDP->h_vector[0], res);
+    
+    element_pow_zn(res, signature->d, signature->z_alpha);
+    element_mul(R2, R2, res);
+
+    // 进入连乘周期
+    element_set1(res);
+    for(int i=0; i<pk_IDP->total_num_of_h_i; i++) {
+        if(is_hidden(select_vector, i)) {
+            printf("I am happy!\n");
+            element_neg(parcel, signature->z_i_hidden[i]);
+            element_pow_zn(parcel, pk_IDP->h_vector[i], parcel);
+            element_mul(res, res, parcel);
+        }
+    }
+    element_mul(R2, R2, res);
+
+    // 完成R1与R2的恢复后，进行最终的验证环节：
+
+
+    element_t temp1, temp2;
+    element_init_GT(temp1, *pk_IDP->pair);
+    element_init_GT(temp2, *pk_IDP->pair);
+
+    pairing_apply(temp1, signature->A_ba, pk_IDP->g2, *pk_IDP->pair);
+    pairing_apply(temp2, signature->A_plus, pk_IDP->omega, *pk_IDP->pair);
+    if (!element_cmp(temp1, temp2)) {
+        printf("equation 1 signature verifies\n");
+    } else {
+        printf("equation 1 signature does not verify\n");
+    }
+
+
+    // 恢复签名c
+    int H_length = 0;
+    int A_plus_length = 0, A_ba_length = 0, d_length = 0, R1_length = 0, R2_length = 0;
+
+    A_plus_length = element_length_in_bytes(signature->A_plus);
+    A_ba_length = element_length_in_bytes(signature->A_ba);
+    d_length = element_length_in_bytes(signature->d);
+    R1_length = element_length_in_bytes(R1);
+    R2_length = element_length_in_bytes(R2);
+
+    H_length = A_plus_length + A_ba_length + R1_length + R2_length;
+
+    unsigned char* data_buffer = (unsigned char*)malloc(H_length*sizeof(unsigned char));
+    memset(data_buffer, 0, H_length*sizeof(unsigned char));
+    // 最后没有必要补\0
+
+    unsigned char* tmp_buffer = data_buffer;
+    element_to_bytes(tmp_buffer, signature->A_plus);
+    tmp_buffer += A_plus_length;
+    element_to_bytes(tmp_buffer, signature->A_ba);
+    tmp_buffer += A_ba_length;
+    element_to_bytes(tmp_buffer, signature->d);
+    tmp_buffer += d_length;
+    element_to_bytes(tmp_buffer, R1);
+    tmp_buffer += R1_length;
+    element_to_bytes(tmp_buffer, R2);
+    // tmp_buffer += R2_length;
+
+    // void hash_SHA256(unsigned char* data_buffer, int length, unsigned char result[])
+    unsigned char result[32] = {0};
+    hash_SHA256(data_buffer, H_length, result);
+    // printf(result);
+    // 成功得到暂时的结果，需要反向映射回去
+
+    element_t c_reproduce;
+    element_init_Zr(c_reproduce, *pk_IDP->pair);
+    element_from_hash(c_reproduce, result, 32); // sha256's length is always 32
+
+    if (!element_cmp(c_reproduce, signature->c)) {
+        printf("equation 2 signature verifies\n");
+    } else {
+        printf("equation 2 signature does not verify\n");
+    }
+    // 至此完成整个算法过程的编写
+    
+
+    // 删除中间变量
+    element_clear(R1);
+    element_clear(R2);
+    element_clear(res);
+    element_clear(parcel);
+    element_clear(res_in_G1);
+
+    element_clear(R1);
+    element_clear(R2);
+
+    element_clear(temp1);
+    element_clear(temp2);
+
+    free(data_buffer);
+
+    */
+    return 1;
+}
+
+void clear_all(struct public_key_IDP* pk_IDP, struct secret_key_IDP* sk_IDP, \
+    struct sigma_c* signature_c, struct sigma* signature) {
+    int N = pk_IDP->total_num_of_h_i;
+
+    element_clear(pk_IDP->omega);
+    for(int i=0; i<N; i++) {
+        element_clear(pk_IDP->h_vector[i]);
+    }
+    free(pk_IDP->h_vector);
+    pairing_clear(*pk_IDP->pair);
+    element_clear(pk_IDP->g1);
+    element_clear(pk_IDP->g2);
+
+    element_clear(sk_IDP->gamma);
+
+    /*
+    element_clear(signature_c->x);
+    element_clear(signature_c->s);
+    element_clear(signature_c->A);
+
+    element_clear(signature->A_plus);
+    element_clear(signature->A_ba);
+    element_clear(signature->d);
+    element_clear(signature->c);
+    element_clear(signature->z_x);
+    element_clear(signature->z_r);
+    element_clear(signature->z_alpha);
+    element_clear(signature->z_beta);
+    for(int i=0; i<N; i++) {
+        element_clear(signature->z_i_hidden[i]);
+    }
+    free(signature->z_i_hidden);
+    element_clear(signature->middle_res);
+    */
+
+    return;
+}
+
 int main() {
 
     char* name = "D224";
@@ -458,6 +768,7 @@ int main() {
     struct public_key_IDP* pk_IDP = NULL;
     pk_IDP = init_IDP_public_key(pair_use, N, sk_IDP);
 
+    
     // 存成链表速度比较慢，最好用数组
     // 先写一个初始版本出来，再说怎样优化
     // there should be only N-1 useful information for everyone of us
@@ -468,6 +779,9 @@ int main() {
     // struct m_i_node* user_virtual_head = get_user_info(N-1, pair_use);
     // 用户信息初始化
 
+    // 下面是message？difficult to understand.
+
+    // element_t的大小不是固定的，所以会出问题？
     element_t* m_vector = (element_t*)malloc(N*sizeof(element_t));
     for(int i=1; i<N; i++) {
         element_init_Zr(m_vector[i], *pair_use);
@@ -477,6 +791,7 @@ int main() {
     // 计算初始签名 sigma_c
     struct sigma_c* sigma_c_user = compute_sigma_c(m_vector, pk_IDP, sk_IDP);
 
+    
     // successfully完成了初始版本的签名，令人费解？
     // 用户消息一定是N个吗？这是以后才需要考虑的问题
 
@@ -491,7 +806,39 @@ int main() {
 
     // 完成complete？
 
+    struct sigma* signature;
+    signature = compute_sigma(sigma_c_user, pk_IDP, m_vector, select_vector);
+    
+    
+    RP_verify(signature, m_vector, select_vector, pk_IDP);
+
+    
     if(pk_IDP!=NULL) printf("\n successfully! \n");
+
+
+    // 在free之前，要进行彻底的clear，防止堆内存溢出
+    // 不能只靠schedule来清理内存，对滴
+
+
+    /*
+    // 这些都是什么玄学错误？
+    clear_all(pk_IDP, sk_IDP, sigma_c_user, signature);
+    
+    pairing_clear(*pair_use);
+    free(sk_IDP);
+    free(pk_IDP);
+
+    for(int i=0; i<N; i++) {
+        element_clear(m_vector[i]);
+    }
+    free(m_vector);
+
+    free(select_vector);
+
+    free(sigma_c_user);
+    free(signature);
+    
+    */
 
     return 0;
 }
