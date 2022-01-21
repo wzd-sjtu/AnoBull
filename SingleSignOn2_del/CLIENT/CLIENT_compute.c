@@ -236,7 +236,5 @@ struct sigma* compute_sigma(struct sigma_c* signature_c, struct public_key_IDP* 
     element_clear(alpha);
     element_clear(beta);
 
-    free(data_buffer);
-
     return signature;
 }

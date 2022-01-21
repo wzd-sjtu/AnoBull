@@ -94,6 +94,10 @@ struct public_key_IDP* init_IDP_public_key(pairing_t* pairing, int N, struct sec
 
     return pk_IDP;
 }
+
+
+
+
 // 查看此index是否在被选择之列表
 int is_hidden(char* select_vector, int loc) {
      if((select_vector[loc]&0x01)==1) {
@@ -112,6 +116,7 @@ void hash_SHA256(unsigned char* data_buffer, int length, unsigned char result[])
     return;
 }
 */
+
 struct sigma_c* compute_sigma_c(element_t* m_vector, struct public_key_IDP* pk_IDP, \
  struct secret_key_IDP* sk_IDP) {
     // 计算初始颁发的匿名凭证

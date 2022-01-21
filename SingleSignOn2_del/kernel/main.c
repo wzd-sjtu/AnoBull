@@ -1,47 +1,8 @@
 #include "IDP_init.h"
 #include "CLIENT_compute.h"
-#include "RP_verify.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-
-void clear_all(struct public_key_IDP* pk_IDP, struct secret_key_IDP* sk_IDP, \
-    struct sigma_c* signature_c, struct sigma* signature) {
-
-    int N = pk_IDP->total_num_of_h_i;
-
-    element_clear(pk_IDP->omega);
-    for(int i=0; i<N; i++) {
-        element_clear(pk_IDP->h_vector[i]);
-    }
-    free(pk_IDP->h_vector);
-    pairing_clear(*pk_IDP->pair);
-    element_clear(pk_IDP->g1);
-    element_clear(pk_IDP->g2);
-
-    element_clear(sk_IDP->gamma);
-
-    
-    element_clear(signature_c->x);
-    element_clear(signature_c->s);
-    element_clear(signature_c->A);
-    element_clear(signature_c->middle_res);
-
-    element_clear(signature->A_plus);
-    element_clear(signature->A_ba);
-    element_clear(signature->d);
-    element_clear(signature->c);
-    element_clear(signature->z_x);
-    element_clear(signature->z_r);
-    element_clear(signature->z_alpha);
-    element_clear(signature->z_beta);
-    for(int i=0; i<N; i++) {
-        element_clear(signature->z_i_hidden[i]);
-    }
-    free(signature->z_i_hidden);
-    return;
-}
 
 
 // 运行指令如下：
@@ -52,7 +13,7 @@ int main() {
 
     
     char* name = "D224";
-    pairing_t* pair_use; // 典型的野指针，难以理解的大问题
+    pairing_t* pair_use;
     pair_use = init_space(name); // it is always a pointer
 
     // 生成IDP私钥
@@ -96,6 +57,9 @@ int main() {
         printf("signature_c equation 1 does not verify\n");
     }
     // 用完的变量记得clear
+    element_clear(temp1);
+    element_clear(temp2);
+    element_clear(tmp);
 
     // Client验证完成后，再进行个性化签名
     
@@ -123,22 +87,12 @@ int main() {
     } else {
         printf("A and A_ba equation 2 does not verify\n");
     }
+    // 用完的变量记得clear
+    element_clear(temp1);
 
     // 成功完成所有变量，下面对别的参数进行处理
-
-    RP_verify(signature, m_vector, select_vector, pk_IDP);
-
-
-    clear_all(pk_IDP, sk_IDP, signature_c, signature);
-    element_clear(temp1);
-    element_clear(temp2);
-    element_clear(tmp);
-    for(int i=0; i<N; i++) {
-        element_free(m_vector[i]);
-    }
-    free(m_vector);
-    free(select_vector); // empty all spaces
     
+   
     while(1);
     return 0;
 }
