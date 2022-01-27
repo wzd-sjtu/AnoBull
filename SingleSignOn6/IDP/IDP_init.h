@@ -10,17 +10,17 @@
 // 公钥of IDP
 // to some fixed space yes!
 struct public_key_IDP {
-    // G2
-    element_t omega;
-    // 为了兼容，可以暂时留着它
-    // 此时在重构，可以去掉它
-    // struct h_i_node* virtual_head;
-    // 所有的h_i均来自群G1
-    // G1
-    element_t* h_vector;
 
     int total_num_of_h_i;
+
+    // pair 是采用的群，是最重要的变量
     pairing_t* pair;
+
+    // G2
+    element_t omega;
+
+    // G1
+    element_t* h_vector;
     // G1
     element_t g1;
     // G2

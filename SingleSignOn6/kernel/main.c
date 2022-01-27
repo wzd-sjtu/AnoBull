@@ -1,6 +1,8 @@
 #include "IDP_init.h"
 #include "CLIENT_compute.h"
 #include "RP_verify.h"
+#include "struct_to_from_bytes.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -134,6 +136,19 @@ int main() {
 
     RP_verify(signature, m_vector, select_vector, pk_IDP);
 
+    // 下面对pair做封装：写入buffer和写出buffer，进行合理的测试？对的
+    unsigned char* package_of_pk_IDP = pk_IDP_to_bytes(pk_IDP);
+    printf("pk_IDP to bytes successfully!\n");
+    struct public_key_IDP* recovery_pk_IDP = pk_IDP_from_bytes(package_of_pk_IDP);
+    printf("bytes to pk_IDP successfully!\n");
+    if(comapre_pk_IDP(pk_IDP, recovery_pk_IDP)==1) {
+        printf("bytes and pk_IDP equation 1 verifies\n");
+    }
+    else {
+        printf("bytes and pk_IDP equation 1 does not verify\n");
+    }
+    // how to verify the sameless?
+    // noway!
     
     clear_all(pk_IDP, sk_IDP, signature_c, signature);
     

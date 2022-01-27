@@ -12,7 +12,7 @@ OBJS = $(BUILD_DIR)/main.o $(BUILD_DIR)/IDP_init.o $(BUILD_DIR)/CLIENT_compute.o
 		$(BUILD_DIR)/struct_to_from_bytes.o
 
 ALL_DEPENDENCIES_H = IDP/IDP_init.h CLIENT/CLIENT_compute.h RP/RP_verify.h \
-		IDP/IDP_audit.h
+		IDP/IDP_audit.h lib/struct_to_from_bytes.h
 
 OUTSIDE_LIB = -L. -l gmp -l pbc -l crypto
 ## compile for c code ##
