@@ -1,4 +1,12 @@
 #include "IDP_audit.h"
+#include "CLIENT_compute.h"
+#include "IDP_init.h"
+#include "/usr/local/include/pbc/pbc.h"
+#include "/usr/local/include/pbc/pbc_test.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <openssl/sha.h>
 
 // 此函数用于大批量的服务验证
 // 需要适当设计相关API
@@ -25,14 +33,14 @@ int IDP_audit(struct sigma_j* signature_j, element_t* m_vector, char* select_vec
 
     
     // 恢复R1
-    element_neg(exponent, signature->z_x);
-    element_pow_zn(R1, signature->A_plus, exponent);
+    element_neg(exponent, signature_j->z_x);
+    element_pow_zn(R1, signature_j->A_plus, exponent);
 
-    element_pow_zn(res, pk_IDP->h_vector[0], signature->z_r);
+    element_pow_zn(res, pk_IDP->h_vector[0], signature_j->z_r);
     element_mul(R1, R1, res); // 将中间变量乘上去即可得之
 
-    element_neg(exponent, signature->c);
-    element_div(res, signature->A_ba, signature->d);
+    element_neg(exponent, signature_j->c);
+    element_div(res, signature_j->A_ba, signature_j->d);
     element_pow_zn(res, res, exponent);
 
     element_mul(R1, R1, res);
@@ -50,12 +58,12 @@ int IDP_audit(struct sigma_j* signature_j, element_t* m_vector, char* select_vec
     element_init_GT(temp1, *pk_IDP->pair);
     element_init_GT(temp2, *pk_IDP->pair);
 
-    pairing_apply(temp1, signature->A_ba, pk_IDP->g2, *pk_IDP->pair);
-    pairing_apply(temp2, signature->A_plus, pk_IDP->omega, *pk_IDP->pair);
+    pairing_apply(temp1, signature_j->A_ba, pk_IDP->g2, *pk_IDP->pair);
+    pairing_apply(temp2, signature_j->A_plus, pk_IDP->omega, *pk_IDP->pair);
     if (!element_cmp(temp1, temp2)) {
-        printf("equation audit 1 signature verifies\n");
+        printf("equation audit 1 signature_j verifies\n");
     } else {
-        printf("equation audit 1 signature does not verify\n");
+        printf("equation audit 1 signature_j does not verify\n");
     }
 
 
@@ -65,9 +73,9 @@ int IDP_audit(struct sigma_j* signature_j, element_t* m_vector, char* select_vec
     int H_length = 0;
     int A_plus_length = 0, A_ba_length = 0, d_length = 0, R1_length = 0, R2_length = 0;
 
-    A_plus_length = element_length_in_bytes(signature->A_plus);
-    A_ba_length = element_length_in_bytes(signature->A_ba);
-    d_length = element_length_in_bytes(signature->d);
+    A_plus_length = element_length_in_bytes(signature_j->A_plus);
+    A_ba_length = element_length_in_bytes(signature_j->A_ba);
+    d_length = element_length_in_bytes(signature_j->d);
     R1_length = element_length_in_bytes(R1);
     R2_length = element_length_in_bytes(R2);
 
@@ -78,11 +86,11 @@ int IDP_audit(struct sigma_j* signature_j, element_t* m_vector, char* select_vec
     // 最后没有必要补\0
 
     unsigned char* tmp_buffer = data_buffer;
-    element_to_bytes(tmp_buffer, signature->A_plus);
+    element_to_bytes(tmp_buffer, signature_j->A_plus);
     tmp_buffer += A_plus_length;
-    element_to_bytes(tmp_buffer, signature->A_ba);
+    element_to_bytes(tmp_buffer, signature_j->A_ba);
     tmp_buffer += A_ba_length;
-    element_to_bytes(tmp_buffer, signature->d);
+    element_to_bytes(tmp_buffer, signature_j->d);
     tmp_buffer += d_length;
     element_to_bytes(tmp_buffer, R1);
     tmp_buffer += R1_length;
@@ -101,10 +109,10 @@ int IDP_audit(struct sigma_j* signature_j, element_t* m_vector, char* select_vec
     element_from_hash(c_reproduce, result, 32); // sha256's length is always 32
 
     // 签名of c再次失败了！
-    if (!element_cmp(c_reproduce, signature->c)) {
-        printf("equation 4 signature verifies\n");
+    if (!element_cmp(c_reproduce, signature_j->c)) {
+        printf("equation 4 signature_j verifies\n");
     } else {
-        printf("equation 4 signature does not verify\n");
+        printf("equation 4 signature_j does not verify\n");
     }
     // 至此完成整个算法过程的编写
     

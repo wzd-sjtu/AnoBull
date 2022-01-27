@@ -25,7 +25,7 @@ struct sigma_j {
     // how to reuse it? I tmply have no idea, should be not pointer
     element_t* z_i_hidden;
 
-    element_t* R2;
+    element_t R2;
     // 缓存起来，用于加速
     // 最好保存为全局变量？
     //////// 重要的中间变量，连乘上套了一个r次方 ////////
