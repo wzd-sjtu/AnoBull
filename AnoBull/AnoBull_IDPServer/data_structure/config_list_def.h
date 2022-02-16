@@ -39,6 +39,7 @@ struct config_structure {
     struct list* user_info_list;
 
     // 配置文件还可以加入什么别的信息呢？
+    // 加入什么信息有待后续拓展
 };
 
 

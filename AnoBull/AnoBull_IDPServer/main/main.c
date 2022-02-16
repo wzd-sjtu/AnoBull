@@ -70,6 +70,8 @@ int main() {
 
     // 配置信息初始化，首先采取手动输入的方式编写
     struct config_structure* test_config_specific = init_test_config();
+
+    struct config_structure* ok_config = read_config_init();
     // 打印所选择的椭圆曲线
     // printf(test_config_specific->Elliptic_Curve_Selection);
     printf("config set init successfully!\n");

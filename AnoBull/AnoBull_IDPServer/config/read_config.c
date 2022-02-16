@@ -28,3 +28,25 @@ struct config_structure* init_test_config() {
 
     return test_config_stru;
 }
+
+struct config_structure* read_config_init() {
+    char buffer[MAX_LINE_READ_CONFIG] = {0};
+
+    FILE* config_file;
+
+    
+    config_file = fopen(CONFIG_DOCUMENT_PATH, "r");
+
+    int read_res = 0;
+
+    while(!feof(config_file)) {
+        read_res = fscanf(config_file, "%[^\n]", buffer);
+
+        if(read_res == -1) break;
+        
+        printf(buffer);
+        printf("\n");
+    }
+    
+
+}
