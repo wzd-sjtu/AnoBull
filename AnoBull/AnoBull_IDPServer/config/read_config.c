@@ -13,10 +13,18 @@ struct config_structure* init_test_config() {
     test_config_stru->port_char = "8889";
     test_config_stru->port_num = 8889;
 
-    test_config_stru->max_connect_thread_number_char = "1000";
-    test_config_stru->max_connect_thread_number_num = 1000;
+    test_config_stru->max_connect_thread_number_char = "5";
+    test_config_stru->max_connect_thread_number_num = 5;
 
     test_config_stru->user_info_list = init_list();
+
+    struct list* tmp_list = test_config_stru->user_info_list;
+
+    // 暂时性编造一部分代码进去
+    push_front("name", "wzd", NULL, tmp_list);
+    push_front("location", "shanghai", NULL, tmp_list);
+    push_front("age", "23", NULL, tmp_list);
+
 
     return test_config_stru;
 }

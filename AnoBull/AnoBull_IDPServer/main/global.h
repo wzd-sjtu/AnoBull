@@ -5,7 +5,10 @@
 #ifndef __MAIN_GLOBAL_H
 #define __MAIN_GLOBAL_H
 
+#include "all_def.h"
+#include "thread_pool.h"
 // 全局读变量，完全不需要加锁
+
 #ifdef __GLOBALS
 struct secret_key_IDP* sk_IDP;
 struct public_key_IDP* pk_IDP;
