@@ -4,7 +4,7 @@
 #include "stdlib.h"
 #include <string.h>
 #include <openssl/sha.h>
-
+#include "all_def.h"
 #include "basic_algorithm.h"
 #include "Elliptic_Curve.h"
 
@@ -12,8 +12,7 @@
 pairing_t* init_space(char* curve_name) {
     if(strcmp(curve_name, "D224") == 0) {
         size_t count = strlen(D224_param);
-
-        pairing_t* tmp = malloc(sizeof(pairing_t));
+        pairing_t* tmp = (pairing_t*)malloc(sizeof(pairing_t));
         pairing_init_set_buf(*tmp, D224_param, count);
         return tmp;
     }

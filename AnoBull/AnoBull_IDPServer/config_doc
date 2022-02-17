@@ -13,13 +13,8 @@ max_connect_thread_num = 10
 # 格式为：（先暂时仅支持纯英文），以4个空格间隔，表示用户的信息结构，最好不要换行
 user_info_structure = Active
 
-begin_begin_begin_begin_info
-
-name    name of you(no more than 20 character)
-gender    gender(man or woman)
-age    just put number in [0, 150]
-email    like the standard email
+name = name of you(no more than 20 character)
+gender = gender(man or woman)
+age = just put number in [0, 150]
+email = like the standard email
 # more extra information
-
-end_end_end_end_info
-

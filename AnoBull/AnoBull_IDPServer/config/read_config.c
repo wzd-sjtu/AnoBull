@@ -67,18 +67,23 @@ struct config_structure* read_config_init() {
 
     // 最好是把这些信息存入数据库，这样速度才能达到最快
     int state = 0;
+
+    int buffer_len_name = 0;
+    int buffer_len_value = 0;
+
     while(!feof(config_file)) {
         // read_res = fscanf(config_file, "%[^\n]", buffer);
         char* tmp = fgets(buffer, MAX_LINE_READ_CONFIG-1, config_file);
         if(tmp == NULL) break;
         
         int read_res = strlen(buffer);
-        // printf(buffer);
+        buffer[read_res] = '\0';
+        //printf(buffer);
         // printf("\n");
 
         // successfully完成了配置文件读取
         if(read_res == 0) continue;
-        if(buffer[0] == ' ' || buffer[0] == '#') continue;
+        if(buffer[0] == ' ' || buffer[0] == '#' || buffer[0] == '\n') continue;
 
         int i = 0, j = 0;
 
@@ -96,7 +101,10 @@ struct config_structure* read_config_init() {
             j++; 
         }
         buffer_value[j] = '\0';
-
+        
+        //printf("line length is %d", read_res);
+        //printf("each line ");
+        // printf(buffer);
         // 最后补充一个'\0'
         // printf(buffer_name);printf("\n");
         // printf(buffer_value);printf("\n");
@@ -119,27 +127,31 @@ struct config_structure* read_config_init() {
             }
         }
 
+        buffer_len_value = strlen(buffer_value);
+
         if(state == 1) {
             test_config_stru->Elliptic_Curve_Selection = \
-                malloc(strlen(buffer_value));
+                malloc(buffer_len_value + 1);
             strcpy(test_config_stru->Elliptic_Curve_Selection, buffer_value);
+            // '\0'会自动进行++处理
+            // test_config_stru->Elliptic_Curve_Selection[buffer_len_value] = '\0';
             state = 0;
         }
         else if(state == 2) {
             test_config_stru->IP_address = \
-                malloc(strlen(buffer_value));
+                malloc(buffer_len_value + 1);
             strcpy(test_config_stru->IP_address, buffer_value);
             state = 0;
         }
         else if(state == 3) {
             test_config_stru->port_char = \
-                malloc(strlen(buffer_value));
+                malloc(buffer_len_value + 1);
             strcpy(test_config_stru->port_char, buffer_value);
             state = 0;
         }
         else if(state == 4) {
             test_config_stru->max_connect_thread_number_char = \
-                malloc(strlen(buffer_value));
+                malloc(buffer_len_value + 1);
             strcpy(test_config_stru->max_connect_thread_number_char, buffer_value);
             state = 0;
         }
@@ -152,8 +164,8 @@ struct config_structure* read_config_init() {
 
         if(state == 6) {
             // 状态六，进行无尽循环，后文都是配置信息
-            char* tmp1 = malloc(strlen(buffer_name));
-            char* tmp2 = malloc(strlen(buffer_value));
+            char* tmp1 = malloc(strlen(buffer_name) + 1);
+            char* tmp2 = malloc(strlen(buffer_value) + 1);
 
             strcpy(tmp1, buffer_name);
             strcpy(tmp2, buffer_value);
@@ -165,12 +177,15 @@ struct config_structure* read_config_init() {
 
         }
     }
-    
 
     // 下面再进行数字转换
     // int number_of_char = 0;
     test_config_stru->port_num = atoi(test_config_stru->port_char);
     test_config_stru->max_connect_thread_number_num = atoi(test_config_stru->max_connect_thread_number_char);
+
+
+    // 处理完记得关闭文件流
+    fclose(config_file);
 
     return test_config_stru;
 
