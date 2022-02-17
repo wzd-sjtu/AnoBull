@@ -1,0 +1,20 @@
+# 这个是配置文件，专门用于配置相关参数
+Elliptic_Curve_Selection = D224
+
+IP_address = 192.168.50.10
+
+port = 8889
+
+# 允许连接的最大线程数
+max_connect_thread_num = 10
+
+# Active表示实际环境，Passive表示测试环境，不使用配置文件
+# 后面是一大段连续的信息，表示用户信息
+# 格式为：（先暂时仅支持纯英文），以4个空格间隔，表示用户的信息结构，最好不要换行
+user_info_structure = Active
+
+name = name of you(no more than 20 character)
+gender = gender(man or woman)
+age = just put number in [0, 150]
+email = like the standard email
+# more extra information
