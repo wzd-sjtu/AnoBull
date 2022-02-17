@@ -13,6 +13,8 @@
 #include <openssl/sha.h>
 
 #include "global.h"
+#include "basic_algorithm.h"
+#include "server_api.h"
 
 // 需要使用的算法
 
@@ -58,15 +60,13 @@ int main() {
         printf("pair you have chosen is not existing.");
         return 0;
     }
-    element_t data;
-    element_init_G1(data, *pair_choice);
+
     
+    sk_IDP = init_IDP_secret_key(pair_choice);
     
-    //sk_IDP = init_IDP_secret_key(pair_choice);
-    
-    //int info_dimention = test_config_specific->user_info_list->list_num;
-    //pk_IDP = init_IDP_public_key(pair_choice, info_dimention, sk_IDP);
-    //printf("Gene public_key and Gene secret_key successfully!\n");
+    int info_dimention = test_config_specific->user_info_list->list_num;
+    pk_IDP = init_IDP_public_key(pair_choice, info_dimention, sk_IDP);
+    printf("Gene public_key and Gene secret_key successfully!\n");
     
 
     // 初始化thread_pool 线程池
@@ -77,6 +77,7 @@ int main() {
     
     // 这里有个小问题，用的是uint转换为int，可能会存在溢出？
     threadpool IDP_thread_pool = thpool_init((int)test_config_specific->max_connect_thread_number_num);
+    printf("thread pool completed!\n");
     // 线程池API
     // int thpool_add_work(threadpool, void (*function_p)(void*), void* arg_p);
     // void thpool_wait(threadpool);
