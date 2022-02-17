@@ -13,9 +13,10 @@ OBJS = $(BUILD_DIR)/main.o \
 	$(BUILD_DIR)/list_own.o \
 	$(BUILD_DIR)/read_config.o \
 	$(BUILD_DIR)/basic_algorithm.o \
-	$(BUILD_DIR)/thread_pool.o
+	$(BUILD_DIR)/thread_pool.o \
+	$(BUILD_DIR)/Elliptic_Curve.o
 
-ALL_DEPENDENCIES_H = config/read_config.h \
+ALL_DEPENDENCIES_H = config/read_config.h config/Elliptic_Curve.h\
 	crypto_algorithm/basic_algorithm.h \
 	data_structure/all_def.h data_structure/list_own.h \
 	main/global.h main/main.h main/stdint_p.h \
@@ -35,11 +36,16 @@ $(BUILD_DIR)/list_own.o: data_structure/list_own.c $(ALL_DEPENDENCIES_H)
 $(BUILD_DIR)/read_config.o: config/read_config.c $(ALL_DEPENDENCIES_H)
 	$(CC) $(CFLAGS) $< -o $@
 
+$(BUILD_DIR)/Elliptic_Curve.o: config/Elliptic_Curve.c $(ALL_DEPENDENCIES_H)
+	$(CC) $(CFLAGS) $< -o $@
+
 $(BUILD_DIR)/basic_algorithm.o: crypto_algorithm/basic_algorithm.c $(ALL_DEPENDENCIES_H)
 	$(CC) $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/thread_pool.o: thread_pool/thread_pool.c $(ALL_DEPENDENCIES_H)
 	$(CC) $(CFLAGS) -D THPOOL_DEBUG $< -o $@
+# Elliptic_Curve.h
+
 
 $(BUILD_DIR)/main.o: main/main.c $(ALL_DEPENDENCIES_H)
 	$(CC) $(CFLAGS) $< -o $@

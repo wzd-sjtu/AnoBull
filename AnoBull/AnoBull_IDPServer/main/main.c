@@ -69,11 +69,20 @@ int main() {
     test_all();
 
     // 配置信息初始化，首先采取手动输入的方式编写
-    struct config_structure* test_config_specific = init_test_config();
+    
+    // struct config_structure* test_config_specific = init_test_config();
 
-    struct config_structure* ok_config = read_config_init();
+    struct config_structure* test_config_specific = read_config_init();
     // 打印所选择的椭圆曲线
     // printf(test_config_specific->Elliptic_Curve_Selection);
+    printf(test_config_specific->Elliptic_Curve_Selection);
+    printf(test_config_specific->IP_address);
+
+    printf("length of curve is %d\n", strlen(test_config_specific->Elliptic_Curve_Selection));
+
+    printf("num is %d\n", (test_config_specific->port_num));
+    printf("max thread is %d\n", test_config_specific->max_connect_thread_number_num);
+
     printf("config set init successfully!\n");
 
     // pairing_t* init_space(char* curve_name);
@@ -112,6 +121,7 @@ int main() {
     sockfd=tcp_listen(port);
     printf("listening on %d\n",port);
 	
+    // 网络部分的架构不应该放在这一部分实现，位置有误
     // 正式进入while循环服务器
 	for(;;) {
 		connfd=accept(sockfd,(struct sockaddr *)&cli_addr, &sin_size);

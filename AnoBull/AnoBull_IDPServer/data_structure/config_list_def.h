@@ -27,11 +27,11 @@ struct config_structure {
 
     // 端口，考虑转变为数字？
     char* port_char;
-    uint32_t_p port_num;
+    int32_t_p port_num;
 
     // 允许连接的最大数目
     char* max_connect_thread_number_char;
-    uint32_t_p max_connect_thread_number_num;
+    int32_t_p max_connect_thread_number_num;
 
     // 用户需要填写的信息链表，暂时给出需要填写的信息格式
     // 填充所有的val1的信息，信息的格式应当是什么？此信息需要提前存储，不考虑鲁棒性
