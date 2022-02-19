@@ -1,4 +1,6 @@
 #include "net_api.h"
+#include "stdint_p.h"
+
 
 // 返回连接后形成的套接字
 int connect_IDP_server() {
@@ -53,14 +55,16 @@ struct public_key_IDP* ask_pk_IDP(int sockfd, char* buf_recv, char* buf_send) {
     // 对于收到的数据，直接解析数据区即可
 
     num = recv(sockfd, buf_recv, MAX_LINE_BUFFER, 0);
+    printf("recv num is %d\n", num);
 
     tmp_header = (struct protocol_header*) buf_recv;
     data_point = (char*)(buf_recv + HEADER_LEN);
 
-    int data_region_len = tmp_header->length;
+    uint16_t_p data_region_len = tmp_header->length;
     
-    struct public_key_IDP* tmp_pk_IDP = pk_IDP_from_bytes(data_point, data_region_len);
+    struct public_key_IDP* tmp_pk_IDP = pk_IDP_from_bytes(data_point);
 
+    printf("get the pk IDP\n");
     // 直接返回生成的公钥即可
     return tmp_pk_IDP;
 }

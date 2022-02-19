@@ -22,7 +22,7 @@ int main() {
 
     sockfd = connect_IDP_server();
 
-    printf("connect successfully!\n");
+    // printf("connect successfully!\n");
     
     struct public_key_IDP* tmp_pk_IDP = ask_pk_IDP(sockfd, buf_recv, buf_send);
 

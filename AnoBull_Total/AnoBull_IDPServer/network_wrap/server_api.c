@@ -8,6 +8,7 @@
 // 公钥+私钥设置为全局变量
 #include "global.h"
 #include "protocol_structure.h"
+#include "stdint_p.h"
 
 // socket+bind+listen
 int tcp_listen(int port)
@@ -56,8 +57,8 @@ void Thread_function(void* arg) {
     printf("this is thread %d\n", clifd);
 
     // 网络编程缓冲区
-    char thread_recv_buffer[MAX_LINE_BUFFER_THREAD];
-    char thread_send_buffer[MAX_LINE_BUFFER_THREAD];
+    char thread_recv_buffer[MAX_LINE_BUFFER_THREAD] = {0};
+    char thread_send_buffer[MAX_LINE_BUFFER_THREAD] = {0};
     // char thread_buffer_send[MAX_LINE_BUFFER_THREAD];
 
     // 后面需要设计网络协议，封装有关的socket接口
@@ -80,6 +81,7 @@ void Thread_function(void* arg) {
 
     int length = 0;
 
+    // printf("go into while\n");
     while(1) {
         // 阻塞了网络，需要重新载入
         // 并不明白如何进行网络编程
@@ -88,15 +90,22 @@ void Thread_function(void* arg) {
         // 具体过程就是不断recv再不断send的过程
         // 这个是多线程里面最核心的内容
 
-        length = read(clifd, thread_recv_buffer, MAX_LINE_BUFFER_THREAD);
-
+        printf("begin recv:\n");
+        length = recv(clifd, thread_recv_buffer, MAX_LINE_BUFFER_THREAD, 0);
+        printf("receive length is %d\n", length);
         // 阻塞读入长度为0，出现了问题
-        if(length <= 0) return;
+        if(length <= 0) {
+            printf("read failed!\n");
+            return;
+        }
         
 
         // 一旦读取到buffer，直接进入process_recv函数
         // 收到消息总要返回一些东西
+        printf("begin compute the send thing!\n");
         length = process_recv(thread_recv_buffer, thread_send_buffer, length);
+        printf("send length is %d\n", length);
+
         // (num=send(sockfd,buf,HEADER_LEN + tmp_header->length, 0)==-1)
         // length 即为最终的缓冲区长度
         length = send(clifd, thread_send_buffer, length, 0);
@@ -111,11 +120,16 @@ void Thread_function(void* arg) {
 }
 
 
-int compute_and_store_public_key(char* thread_send_buffer, int data_len_limit) {
+int compute_and_store_public_key(char* send_buffer, int data_len_limit) {
     // 这里进行的是公钥转换
-    int tmp_res = pk_IDP_to_bytes(pk_IDP, thread_send_buffer, data_len_limit);
+    // printf("!!!!!!\n");
+    int tmp_res = pk_IDP_to_bytes(pk_IDP, send_buffer, data_len_limit);
     if(tmp_res == 0) return 0;
 
+    // struct public_key_IDP* pk_IDP_from_bytes(unsigned char* data_buffer, int length);
+    // int comapre_pk_IDP(struct public_key_IDP* pk_IDP, struct public_key_IDP* new_pk_IDP);
+
+    // struct public_key_IDP* pk_IDP_from_bytes(data_buffer, 0);
     // 完成了内容转换
     return tmp_res;
 }
@@ -124,20 +138,22 @@ int compute_and_store_public_key(char* thread_send_buffer, int data_len_limit) {
 
 int process_recv(char* thread_recv_buffer, char* thread_send_buffer, int recv_length) {
     // 指针强制类型转换
-    struct protocol_header* tmp_header = (struct protocol_header*)thread_recv_buffer;
+    struct protocol_header* recv_header = (struct protocol_header*)thread_recv_buffer;
     struct protocol_header* send_header = (struct protocol_header*)thread_send_buffer;
 
-    // 发送头清零
+    // 发送头header清零
     memset(send_header, 0, sizeof(struct protocol_header));
 
     // header len已经固定为8bytes，不需要再次修改了
-    char* data_buffer = (char*)(thread_send_buffer + HEADER_LEN);
+    char* send_buffer = (char*)(thread_send_buffer + HEADER_LEN);
     // 关键信息提取
-    unsigned int data_len = tmp_header->length;
-    unsigned int now_state = tmp_header->state;
+    uint8_t_p data_len = recv_header->length;
+    uint8_t_p now_state = recv_header->state;
 
 
     // 进入了核心逻辑区，state状态变量,需要加入无穷while循环及scanf输入判断
+
+    
     switch(now_state){
         case 0: {
             // 输入不合理，表示失败了
@@ -150,9 +166,10 @@ int process_recv(char* thread_recv_buffer, char* thread_send_buffer, int recv_le
 
             // 希望把缓冲区直接填入buffer里面，减少内容的复制粘贴
             // data_len是最大数据区长度
-            int put_len = compute_and_store_public_key(thread_send_buffer, DATA_LEN);
+
+            int put_len = compute_and_store_public_key(send_buffer, DATA_LEN);
             // send 完成之后，进入wait状态
-            
+
             // 计算了公钥并且返回给目标
             send_header->state = 1;
             send_header->length = put_len;
@@ -188,6 +205,8 @@ int process_recv(char* thread_recv_buffer, char* thread_send_buffer, int recv_le
     now_state = -1;
 
     // 不是0便是-1，这里明显有不合理的内容
+    
+
     return 0;
 
 }

@@ -67,7 +67,7 @@ $(BUILD_DIR)/IDP_kernel.bin: $(OBJS)
 ## make all files
 all:$(BUILD_DIR)/IDP_kernel.bin
 	echo "compile and link successfully!"
-
+	./build/IDP_kernel.bin
 clean:
 	rm build/*.o
 	rm build/*.bin
