@@ -35,6 +35,9 @@ int main() {
     
     // 下面是一些打印信息
     struct config_structure* test_config_specific = read_config_init();
+
+    // 不会改动的全局变量，可以并行读取
+    all_config = test_config_specific;
     // 打印所选择的椭圆曲线
     // printf(test_config_specific->Elliptic_Curve_Selection);
     // printf(test_config_specific->Elliptic_Curve_Selection);printf("\n");

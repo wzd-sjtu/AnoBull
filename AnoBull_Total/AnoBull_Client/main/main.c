@@ -29,6 +29,22 @@ int main() {
     
     struct public_key_IDP* tmp_pk_IDP = ask_pk_IDP(sockfd, buf_recv, buf_send);
 
+    // 继续获取对应的information
+    struct list* user_info_infra = ask_user_info_infra(sockfd, buf_recv, buf_send);
+    if(user_info_infra == NULL) {
+        printf("get the none list!");
+    }
+    struct list_node* tmp = user_info_infra->vir_head->next;
+
+    
+    while(tmp != user_info_infra->vir_tail) {
+        printf("val name is %s\n", (char*)tmp->val1);
+        printf("description name is %s\n", (char*)tmp->val3);
+        tmp = tmp->next;
+    }
+
+    // 下面可以对内容进行填入了！
+
     close(sockfd);
 
     while(1) {

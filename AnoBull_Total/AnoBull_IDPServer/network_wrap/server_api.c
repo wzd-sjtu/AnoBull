@@ -9,6 +9,8 @@
 #include "global.h"
 #include "protocol_structure.h"
 #include "stdint_p.h"
+#include "all_def.h"
+#include "string.h"
 
 // socket+bind+listen
 int tcp_listen(int port)
@@ -134,7 +136,64 @@ int compute_and_store_public_key(char* send_buffer, int data_len_limit) {
     return tmp_res;
 }
 
+int store_user_info_infra(char* send_buffer, int data_len_limit) {
+    // 这里涉及到配置信息config
+    // 这个参数貌似没有传递下来emm
+    struct list* user_info_fra_list = all_config->user_info_list;
 
+    // 取出链表
+    // 遍历存入缓冲区
+    struct list_node* head = user_info_fra_list->vir_head->next;
+    struct list_node* tail = user_info_fra_list->vir_tail;
+
+    int total_len = 0;
+    int loc_i = 0;
+
+    char* name = NULL;
+    char* value = NULL;
+    char* buf_tmp = send_buffer;
+
+
+    while(head != tail) {
+        // 将信息填入缓冲区
+        // 由于strcpy缺陷，选择手动进行
+        
+        name = (char*)head->val1;
+        value = (char*)head->val2;
+
+        // printf("name and value is %s and %s\n", name, value);
+
+        loc_i = 0;
+        while(name[loc_i] != '\0') {
+            *buf_tmp = name[loc_i];
+            buf_tmp++;
+            total_len++;
+            loc_i++;
+        }
+        total_len++;
+        *buf_tmp = '=';
+        buf_tmp++;
+
+        loc_i = 0;
+        while(value[loc_i] != '\0') {
+            *buf_tmp = value[loc_i];
+            buf_tmp++;
+            total_len++;
+            loc_i++;
+        }
+
+        total_len++;
+        // use the blank to split the data here
+        *buf_tmp = '\0';
+        buf_tmp++;
+
+        head = head->next;
+    }
+
+    // 这里没有进行缓冲区保护，将来有可能出现溢出问题？
+    // 暂时先写一个最简单的手段吧
+    return total_len;
+}
 
 int process_recv(char* thread_recv_buffer, char* thread_send_buffer, int recv_length) {
     // 指针强制类型转换
@@ -182,7 +241,18 @@ int process_recv(char* thread_recv_buffer, char* thread_send_buffer, int recv_le
         }
         case 2: {
             // 发送用户需要的信息串结构，按照标准写入buffer之中
-            int put_len = compute_and_store_public_key(thread_send_buffer, DATA_LEN);
+            // 用户请求信息串结构
+            // 存储方法：
+            // key:value key:value  , 中间以空格分离
+
+            // DATA_LEN是长度上限
+            // just get the different code here
+            int put_len = store_user_info_infra(send_buffer, DATA_LEN);
+
+            send_header->state = 2;
+            send_header->length = put_len;
+
+            return send_header->length + HEADER_LEN;
         }
         case 3: {
             // 用户发来的信息串序列，这是最基本的内容

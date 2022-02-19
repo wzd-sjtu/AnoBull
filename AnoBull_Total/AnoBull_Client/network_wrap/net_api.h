@@ -31,5 +31,6 @@
 
 int connect_IDP_server();
 struct public_key_IDP* ask_pk_IDP(int sockfd, char* buf_recv, char* buf_send);
+struct list* ask_user_info_infra(int sockfd, char* buf_recv, char* buf_send);
 
 #endif
