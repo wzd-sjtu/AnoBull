@@ -11,9 +11,13 @@
 // 均是在运行中生成，堆空间应该是很大才对
 pairing_t* init_space(char* curve_name) {
     if(strcmp(curve_name, "D224") == 0) {
+        // printf("this is init space!!\n\n");
         size_t count = strlen(D224_param);
         pairing_t* tmp = (pairing_t*)malloc(sizeof(pairing_t));
         pairing_init_set_buf(*tmp, D224_param, count);
+        // element_t g1;
+        // printf("init pair successfully!\n");
+        // 传递出去的变量，应当是不会消失才对的
         return tmp;
     }
     return NULL;

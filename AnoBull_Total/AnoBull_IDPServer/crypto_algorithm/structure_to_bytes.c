@@ -1,12 +1,15 @@
 #include "stdio.h"
 #include "stdlib.h"
 #include "structure_to_bytes.h"
+#include "all_def.h"
+#include "global.h"
 
 // just to element is ok for me
 
 // 本文件目前只实现了公钥的内容转换，仍然有许多许多小问题
 
-int pk_IDP_to_bytes_del(struct public_key_IDP* pk_IDP, char* data_buffer, int data_len_limit) {
+// 本质上是不需要传参数的
+int pk_IDP_to_bytes_del(char* data_buffer, int data_len_limit) {
     int H_length = 0;
     int omega_length = 0, h_vector_length = 0, total_num_of_h_i_length = 0, \
         pair_length = 0, g1_length = 0, g2_length = 0;
@@ -118,7 +121,7 @@ int pk_IDP_to_bytes_del(struct public_key_IDP* pk_IDP, char* data_buffer, int da
 }
 
 
-int pk_IDP_to_bytes(struct public_key_IDP* pk_IDP, char* data_buffer, int data_len_limit) {
+int pk_IDP_to_bytes(char* data_buffer, int data_len_limit) {
     int H_length = 0;
     int omega_length = 0, h_vector_length = 0, total_num_of_h_i_length = 0, \
         pair_length = 0, g1_length = 0, g2_length = 0;
@@ -130,13 +133,6 @@ int pk_IDP_to_bytes(struct public_key_IDP* pk_IDP, char* data_buffer, int data_l
 
     each_h_vector_length = element_length_in_bytes(pk_IDP->h_vector[0]);
     h_vector_length = each_h_vector_length*pk_IDP->total_num_of_h_i;
-
-    // about how to audit? there is no necessary method to implement the project
-    // should be pair transtmitted? no useful?
-
-    // pair should be initialized in the local
-    // just need a function
-    // pair_length = element_length_in_bytes(*pk_IDP->pair);
 
     char* pair_choice = "D224";
     pair_length = 8; // give 8 bytes to store pair_choice
@@ -152,15 +148,8 @@ int pk_IDP_to_bytes(struct public_key_IDP* pk_IDP, char* data_buffer, int data_l
 
     H_length += (total_num_of_h_i_length + 1);  // 最后要补一个\0,标志着字符串的结束
 
+    printf("pk_idp bytes' length is %d\n", H_length);
 
-    // only nothing to store, right? 
-    // unsigned char* data_buffer = (unsigned char*)malloc(H_length*sizeof(unsigned char));
-    // memset(data_buffer, 0, H_length*sizeof(unsigned char));
-    // 对于别的选择，最后会补一个斜杠0表示终止
-
-    
-    // store into it, use int function
-    // firstly store the total_number 
     unsigned char* tmp_buffer = data_buffer;
 
     memcpy(tmp_buffer, pair_choice, strlen(pair_choice));
@@ -176,18 +165,9 @@ int pk_IDP_to_bytes(struct public_key_IDP* pk_IDP, char* data_buffer, int data_l
     
     omega_length = element_to_bytes(tmp_buffer, pk_IDP->omega);
 
-    element_t tmp_omega;
-    element_init_G2(tmp_omega, *pk_IDP->pair);
-    int another_len = element_from_bytes(tmp_omega, tmp_buffer);
-    printf("\n pre num is %d, next num is %d \n", omega_length, another_len);
-
-    // there should be \0 stored into it?
-    if(element_cmp(tmp_omega, pk_IDP->omega)==0) {
-        printf("\n failed it! \n");
-    }
-
     tmp_buffer += omega_length;
 
+    // 排查bug 排查地心态有点小崩
     for(int i=0; i<pk_IDP->total_num_of_h_i; i++) {
         element_to_bytes(tmp_buffer, pk_IDP->h_vector[i]);
         tmp_buffer += each_h_vector_length;
@@ -205,6 +185,7 @@ int pk_IDP_to_bytes(struct public_key_IDP* pk_IDP, char* data_buffer, int data_l
 }
 
 // length是可以在网络通信中完成传递的
+// 这个from函数是需要处理的了
 struct public_key_IDP* pk_IDP_from_bytes(unsigned char* data_buffer, int length) {
     // needed to use the API
     // int element_from_bytes(element_t e, unsigned char *data)
@@ -278,7 +259,7 @@ struct public_key_IDP* pk_IDP_from_bytes(unsigned char* data_buffer, int length)
     return res_pk_IDP;
 }
 
-int comapre_pk_IDP(struct public_key_IDP* pk_IDP, struct public_key_IDP* new_pk_IDP) {
+int comapre_pk_IDP(struct public_key_IDP* new_pk_IDP) {
     int res = 0;
     if(element_cmp(pk_IDP->omega, new_pk_IDP->omega) != 0) {
         // printf("yes!");

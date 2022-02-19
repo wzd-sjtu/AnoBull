@@ -156,9 +156,10 @@ struct config_structure* read_config_init() {
             state = 0;
         }
         else if(state == 5) {
-            if(strcmp(buffer_value, "Active") == 0)
-                state == 6;
-            else state == 7;
+            if(strcmp(buffer_value, "Active") == 0) {
+                state = 6;
+            }
+            else state = 7;
         }
 
 
@@ -170,6 +171,8 @@ struct config_structure* read_config_init() {
             strcpy(tmp1, buffer_name);
             strcpy(tmp2, buffer_value);
 
+            printf(tmp1);printf(" = ");printf(tmp2);printf("\n");
+
             // 进行数据存储
             push_front(tmp1, tmp2, NULL, test_config_stru->user_info_list);
         }
@@ -180,6 +183,8 @@ struct config_structure* read_config_init() {
 
     // 下面再进行数字转换
     // int number_of_char = 0;
+    printf("after the push, the user info number is %d\n", test_config_stru->user_info_list->list_num);
+
     test_config_stru->port_num = atoi(test_config_stru->port_char);
     test_config_stru->max_connect_thread_number_num = atoi(test_config_stru->max_connect_thread_number_char);
 

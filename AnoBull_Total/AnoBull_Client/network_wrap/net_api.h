@@ -2,6 +2,9 @@
 #define __NET_API_H
 
 // renew the total project
+#include "/usr/local/include/pbc/pbc.h"
+#include "/usr/local/include/pbc/pbc_test.h"
+
 #include "protocol_structure.h"
 #include "net_config.h"
 #include "all_def.h"

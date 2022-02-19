@@ -1,6 +1,9 @@
 #include "stdio.h"
 #include "stdlib.h"
 #include "structure_to_bytes.h"
+#include "/usr/local/include/pbc/pbc.h"
+#include "/usr/local/include/pbc/pbc_test.h"
+#include "basic_algorithm.h"
 
 // just to element is ok for me
 
@@ -10,8 +13,6 @@
 struct public_key_IDP* pk_IDP_from_bytes(unsigned char* data_buffer) {
     // needed to use the API
     // int element_from_bytes(element_t e, unsigned char *data)
-
-    
     int H_length = 0;
     int omega_length = 0, h_vector_length = 0, \
         g1_length = 0, g2_length = 0;
@@ -33,24 +34,22 @@ struct public_key_IDP* pk_IDP_from_bytes(unsigned char* data_buffer) {
     // using the pair choice to initialize the pair
     memcpy(pair_choice, tmp_buffer, pair_length);
     tmp_buffer += pair_length;
+    printf("pair choice is %s\n", pair_choice);
 
     // printf("chosen group is ");
     // printf(pair_choice);
     // printf("\n");
 
     // init the pair space, what happened?? should be initialized the pair firstly?
-
-    
     res_pk_IDP->pair = init_space(pair_choice);
     // then set the group of element
-    
-    
-    
+
+    // 为何初始化会失败？？难以理解
+
     element_init_G2(res_pk_IDP->omega, *res_pk_IDP->pair);
     element_init_G1(res_pk_IDP->g1, *res_pk_IDP->pair);
     element_init_G2(res_pk_IDP->g2, *res_pk_IDP->pair);
-    /*
-    
+
     
     
     // always from order to implement the data_buffer
@@ -83,12 +82,7 @@ struct public_key_IDP* pk_IDP_from_bytes(unsigned char* data_buffer) {
     g2_length = element_from_bytes(res_pk_IDP->g2, tmp_buffer);
     tmp_buffer += g2_length;
     
-    
-
     return res_pk_IDP;
-    */
-
-    return NULL;
 }
 
 int comapre_pk_IDP(struct public_key_IDP* pk_IDP, struct public_key_IDP* new_pk_IDP) {

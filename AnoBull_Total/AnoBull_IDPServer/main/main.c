@@ -16,6 +16,8 @@
 #include "basic_algorithm.h"
 #include "server_api.h"
 
+#include "structure_to_bytes.h"
+
 // 需要使用的算法
 
 int main() {
@@ -65,15 +67,24 @@ int main() {
     sk_IDP = init_IDP_secret_key(pair_choice);
     
     int info_dimention = test_config_specific->user_info_list->list_num;
+    printf("info dimention is %d\n", info_dimention);
     pk_IDP = init_IDP_public_key(pair_choice, info_dimention, sk_IDP);
     printf("Gene public_key and Gene secret_key successfully!\n");
     
+    /*
+    char test_char[4098] = {0};
+    int lenlen = pk_IDP_to_bytes(test_char, 0);
+    struct public_key_IDP* recover_pk_IDP = pk_IDP_from_bytes(test_char, 0);
+    if(comapre_pk_IDP(recover_pk_IDP) == 1) {
+        printf("yes yes yes!\n");
+    }
+    */
 
     // 初始化thread_pool 线程池
     // 线程池数据结构
     // typedef struct thpool_* threadpool;
     
-
+    // 这里的全局变量设计。。  确实是需要有一个全局变量的
     
     // 这里有个小问题，用的是uint转换为int，可能会存在溢出？
     threadpool IDP_thread_pool = thpool_init((int)test_config_specific->max_connect_thread_number_num);

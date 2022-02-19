@@ -123,7 +123,7 @@ void Thread_function(void* arg) {
 int compute_and_store_public_key(char* send_buffer, int data_len_limit) {
     // 这里进行的是公钥转换
     // printf("!!!!!!\n");
-    int tmp_res = pk_IDP_to_bytes(pk_IDP, send_buffer, data_len_limit);
+    int tmp_res = pk_IDP_to_bytes(send_buffer, data_len_limit);
     if(tmp_res == 0) return 0;
 
     // struct public_key_IDP* pk_IDP_from_bytes(unsigned char* data_buffer, int length);

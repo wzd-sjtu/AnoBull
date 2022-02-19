@@ -37,6 +37,7 @@ struct public_key_IDP* ask_pk_IDP(int sockfd, char* buf_recv, char* buf_send) {
 
     // 首先目标是send再recv，这个顺序要考虑consider清楚
     struct protocol_header* tmp_header = (struct protocol_header*) buf_send;
+    memset(tmp_header, 0, sizeof(struct protocol_header));
     // 请求公钥
     tmp_header->sig_pro = 1;
     tmp_header->state = 1;
@@ -57,14 +58,17 @@ struct public_key_IDP* ask_pk_IDP(int sockfd, char* buf_recv, char* buf_send) {
     num = recv(sockfd, buf_recv, MAX_LINE_BUFFER, 0);
     printf("recv num is %d\n", num);
 
-    tmp_header = (struct protocol_header*) buf_recv;
-    data_point = (char*)(buf_recv + HEADER_LEN);
+    char* recv_header = (struct protocol_header*) buf_recv;
+    char* recv_data = (char*)(buf_recv + HEADER_LEN);
 
-    uint16_t_p data_region_len = tmp_header->length;
-    
-    struct public_key_IDP* tmp_pk_IDP = pk_IDP_from_bytes(data_point);
+    // uint16_t_p data_region_len = tmp_header->length;
+    struct public_key_IDP* tmp_pk_IDP = NULL;
+    if(tmp_header->state == 1) {
 
-    printf("get the pk IDP\n");
+        // so why there is a problem?
+        tmp_pk_IDP = pk_IDP_from_bytes(recv_data);
+        printf("get the pk IDP\n");
+    }
     // 直接返回生成的公钥即可
     return tmp_pk_IDP;
 }

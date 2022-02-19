@@ -6,6 +6,9 @@
 #include "net_api.h"
 #include "all_def.h"
 
+#include "Elliptic_Curve.h"
+#include "basic_algorithm.h"
+
 int main() {
 
     printf("client start!\n");
@@ -17,8 +20,8 @@ int main() {
     // 全部使用协议封装，send和recv的解析需要全部封装
 
     int sockfd;    /* files descriptors */
-    char buf_recv[MAX_LINE_BUFFER];    /* buf will store received text */
-    char buf_send[MAX_LINE_BUFFER];
+    char buf_recv[MAX_LINE_BUFFER] = {0};    /* buf will store received text */
+    char buf_send[MAX_LINE_BUFFER] = {0};
 
     sockfd = connect_IDP_server();
 
