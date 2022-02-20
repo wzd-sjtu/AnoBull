@@ -107,3 +107,36 @@ int comapre_pk_IDP(struct public_key_IDP* pk_IDP, struct public_key_IDP* new_pk_
     }
     return 1;
 }
+
+
+struct sigma_c* sigma_c_from_bytes(char* data_buffer, int length, struct public_key_IDP* pk_IDP) {
+    // 下面对thing做一个恢复
+    // 这个api对于user端来说，也是成立的
+    struct sigma_c* res_sigma_c = (struct sigma_c*)malloc(sizeof(struct sigma_c));
+
+    element_init_Zr(res_sigma_c->x, *pk_IDP->pair);
+    element_init_Zr(res_sigma_c->s, *pk_IDP->pair);
+
+    element_init_G1(res_sigma_c->A, *pk_IDP->pair);
+
+    element_init_G1(res_sigma_c->middle_res, *pk_IDP->pair);
+
+    char* tmp_buffer = data_buffer;
+
+    int tmp_len = 0;
+
+    tmp_len = element_from_bytes(res_sigma_c->x, tmp_buffer);
+    tmp_buffer += tmp_len;
+
+    tmp_len = element_from_bytes(res_sigma_c->s, tmp_buffer);
+    tmp_buffer += tmp_len;
+
+    tmp_len = element_from_bytes(res_sigma_c->A, tmp_buffer);
+    tmp_buffer += tmp_len;
+
+    tmp_len = element_from_bytes(res_sigma_c->middle_res, tmp_buffer);
+    tmp_buffer += tmp_len;
+
+    // successfully get the target result.
+    return res_sigma_c;
+}

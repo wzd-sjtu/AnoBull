@@ -84,6 +84,12 @@ void Thread_function(void* arg) {
     int length = 0;
 
     // printf("go into while\n");
+
+    // 这个指针是需要大规模修改的了
+    
+    struct list* user_main_list = NULL;
+    struct list** para_transmit = &user_main_list;
+
     while(1) {
         // 阻塞了网络，需要重新载入
         // 并不明白如何进行网络编程
@@ -105,7 +111,7 @@ void Thread_function(void* arg) {
         // 一旦读取到buffer，直接进入process_recv函数
         // 收到消息总要返回一些东西
         printf("begin compute the send thing!\n");
-        length = process_recv(thread_recv_buffer, thread_send_buffer, length);
+        length = process_recv(thread_recv_buffer, thread_send_buffer, length, para_transmit);
         printf("send length is %d\n", length);
 
         // (num=send(sockfd,buf,HEADER_LEN + tmp_header->length, 0)==-1)
@@ -242,6 +248,7 @@ struct list* recv_user_info_list(char* recv_data, struct protocol_header* recv_h
         // jump the blank
         loc++;
 
+        // 确实有且仅有位置1和位置2
         push_front(name, description, NULL, tmp_list);
     }
 
@@ -259,7 +266,7 @@ int store_user_info(struct list* user_info_list) {
 }
 
 
-int process_recv(char* thread_recv_buffer, char* thread_send_buffer, int recv_length) {
+int process_recv(char* thread_recv_buffer, char* thread_send_buffer, int recv_length, void** para_transmit) {
     // 指针强制类型转换
     struct protocol_header* recv_header = (struct protocol_header*)thread_recv_buffer;
     struct protocol_header* send_header = (struct protocol_header*)thread_send_buffer;
@@ -277,6 +284,7 @@ int process_recv(char* thread_recv_buffer, char* thread_send_buffer, int recv_le
 
     // 用户信息list
     // 每一个线程都拥有自己独立的list，并且这个list不需要继续向上传递
+
     struct list* user_info_list_specific = NULL;
 
     // 进入了核心逻辑区，state状态变量,需要加入无穷while循环及scanf输入判断
@@ -338,11 +346,41 @@ int process_recv(char* thread_recv_buffer, char* thread_send_buffer, int recv_le
 
             // 上文已经完成定义的list，在这里使用函数填充
             user_info_list_specific = recv_user_info_list(recv_buffer, recv_header);
+
+
+
+
+
+
+
+
+
+
+        // 及其危险的操作
+        // 为了让程序运行，加了一个无锁的全局变量，并且会被不断修改
+        // pub_list = user_info_list_specific;
+        // 二重指针参数原地修改
+        *(struct list**)para_transmit = user_info_list_specific;
+
+
+
+
+
+
+
+
+
+
+            // traverse_show_list(user_info_list_specific);
             // 再把list存入send_buffer里面，供后面填充
 
             // 将信息串序列存入数据库，信息持久化
+            // 这个持久化是必备的，缺一不可，可以补一个全局资源池来存储，从而支持并发
+            // 可以暂时设计层带锁的全局位图存储
+            // 最好的法子还是存入数据库，我真是吐了。。
+            
             int put_len = store_user_info(user_info_list_specific);
-
+            
             send_header->state = 3;
             
             strcpy(send_buffer, "Server has receive and store your information!");
@@ -361,16 +399,32 @@ int process_recv(char* thread_recv_buffer, char* thread_send_buffer, int recv_le
             printf("client request is:%s\n", recv_buffer);
             
             // N会在pk_IDP内完成设置
+
+
+            // 这里的无锁全局变量很危险，最好存入数据库
+            // traverse_show_list(pub_list);
+
+            struct list* user_info_list_specific = *(struct list**)para_transmit;
+
             element_t* m_vector = convert_info_to_vector(user_info_list_specific, pk_IDP);
             
+            // pub_list
             struct sigma_c* will_send_sigma_c = compute_sigma_c(m_vector, pk_IDP, sk_IDP);
             
             // 进行持久化存储？
             store_sigma_c(will_send_sigma_c);
-            int put_len = sigma_c_to_bytes(will_send_sigma_c);
 
+            // 填入缓冲区
+            int put_len = sigma_c_to_bytes(will_send_sigma_c, send_buffer, DATA_LEN);
+            // printf("put_len:%d\n", put_len);
+            // 下面这个新功能需要先测试再进行添加处理了！
+            // struct sigma_c* gg = sigma_c_from_bytes()
+            // 将目标转化为bytes
+            send_header->state = 4;
+            send_header->length = put_len;
+            
             // 这里又是新的api，信息存储api又来了
-
+            return send_header->length + HEADER_LEN;
         }
         default: {
             // 输入不合理，表示失败了

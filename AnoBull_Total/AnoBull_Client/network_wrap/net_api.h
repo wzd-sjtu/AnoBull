@@ -9,6 +9,7 @@
 #include "net_config.h"
 #include "all_def.h"
 #include "stdlib.h"
+#include "structure_to_bytes.h"
 
 
 #include <sys/stat.h>
@@ -34,4 +35,5 @@ struct public_key_IDP* ask_pk_IDP(int sockfd, char* buf_recv, char* buf_send);
 struct list* ask_user_info_infra(int sockfd, char* buf_recv, char* buf_send);
 void fill_up_user_info(char* input_buffer, struct list* user_info_infra, int input_length_limit);
 int send_user_info_to_IDP(int sockfd, char* buf_recv, char* buf_send, struct list* user_info_infra);
+struct sigma_c* ask_compute_sigma_c(int sockfd, char* buf_recv, char* buf_send, struct public_key_IDP* tmp_pk_IDP);
 #endif

@@ -52,6 +52,10 @@ int main() {
 
     send_user_info_to_IDP(sockfd, buf_recv, buf_send, user_info_infra);
 
+
+    // 状态四：请求计算签名 sigma_c
+    struct sigma_c* res_sigma_c = ask_compute_sigma_c(sockfd, buf_recv, buf_send, tmp_pk_IDP);
+    
     close(sockfd);
 
     while(1) {

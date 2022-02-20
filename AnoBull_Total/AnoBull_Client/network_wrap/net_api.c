@@ -286,3 +286,49 @@ int send_user_info_to_IDP(int sockfd, char* buf_recv, char* buf_send, struct lis
     // 返回值为1，表示发送成功，并且接收到服务器的回复
     return 1;
 }
+
+
+
+struct sigma_c* ask_compute_sigma_c(int sockfd, char* buf_recv, char* buf_send, struct public_key_IDP* tmp_pk_IDP) {
+    // 目前已经获得目标消息了
+    // 首先目标是send再recv，这个顺序要考虑consider清楚
+    struct protocol_header* tmp_header = (struct protocol_header*) buf_send;
+    memset(tmp_header, 0, sizeof(struct protocol_header));
+    // 请求公钥
+    tmp_header->sig_pro = 4;
+    tmp_header->state = 4;
+    
+    char* data_point = (char*)(buf_send + HEADER_LEN);
+    strcpy(data_point, "Hello Server! I am Client! and I want sigma_c which is the 匿名凭证!");
+    tmp_header->length = strlen(data_point); // 存入对应的信息即可得部分结果
+
+    int num = send(sockfd, buf_send, HEADER_LEN + tmp_header->length, 0);
+
+    if(num == -1) {
+        printf("send failed!\n");
+        return NULL;
+    }
+
+    // 对于收到的数据，直接解析数据区即可
+
+    num = recv(sockfd, buf_recv, MAX_LINE_BUFFER, 0);
+    printf("recv num is %d\n", num);
+
+    struct protocol_header* recv_header = (struct protocol_header*) buf_recv;
+    char* recv_data = (char*)(buf_recv + HEADER_LEN);
+
+    // uint16_t_p data_region_len = tmp_header->length;
+    struct sigma_c* res_sigma_c = NULL;
+    if(tmp_header->state == 4) {
+
+        // so why there is a problem?
+        // struct sigma_c* sigma_c_from_bytes(char* data_buffer, int length, struct public_key_IDP* pk_IDP);
+        // also 需要公钥！
+
+        // 一个地方存公钥，一个地方存私钥，让人费解
+        res_sigma_c = sigma_c_from_bytes(recv_data, recv_header->length, tmp_pk_IDP);
+        printf("successfully get the sigma_c!\n");
+    }
+    // 直接返回计算的签名即可
+    return res_sigma_c;
+}

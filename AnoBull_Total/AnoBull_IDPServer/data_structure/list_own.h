@@ -33,5 +33,5 @@ struct list_node* pop_front(struct list* my_list);
 void push_back(void* v1, void* v2, void* v3, struct list* my_list);
 struct list_node* pop_back(struct list* my_list);
 
-
+void traverse_show_list(struct list* my_list);
 #endif

@@ -181,7 +181,7 @@ struct config_structure* read_config_init() {
         }
     }
     // 多读了一个配置参数
-    pop_front(test_config_stru->user_info_list);
+    pop_back(test_config_stru->user_info_list);
 
     // 下面再进行数字转换
     // int number_of_char = 0;

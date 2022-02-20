@@ -285,8 +285,60 @@ int comapre_pk_IDP(struct public_key_IDP* new_pk_IDP) {
 
 // a lot of unsolved problem just take place!
 
-int sigma_c_to_bytes(struct sigma_c* will_send_sigma_c) {
+int sigma_c_to_bytes(struct sigma_c* will_send_sigma_c, char* data_buffer, int data_len_limit) {
     // another convert function
     // which is always complex for me to build it.
+    int tmp_store_len = 0;
+    int total_len = 0;
+
+    char* tmp_buffer = data_buffer;
+    tmp_store_len = element_to_bytes(data_buffer, will_send_sigma_c->x);
+    total_len += tmp_store_len;
     
+    data_buffer += tmp_store_len;
+    tmp_store_len = element_to_bytes(data_buffer, will_send_sigma_c->s);
+    total_len += tmp_store_len;
+
+    data_buffer += tmp_store_len;
+    tmp_store_len = element_to_bytes(data_buffer, will_send_sigma_c->A);
+    total_len += tmp_store_len;
+
+    data_buffer += tmp_store_len;
+    tmp_store_len = element_to_bytes(data_buffer, will_send_sigma_c->middle_res);
+    total_len += tmp_store_len;
+
+    return total_len;
+}
+
+
+struct sigma_c* sigma_c_from_bytes(char* data_buffer, int length, struct public_key_IDP* pk_IDP) {
+    // 下面对thing做一个恢复
+    // 这个api对于user端来说，也是成立的
+    struct sigma_c* res_sigma_c = (struct sigma_c*)malloc(sizeof(struct sigma_c));
+
+    element_init_Zr(res_sigma_c->x, *pk_IDP->pair);
+    element_init_Zr(res_sigma_c->s, *pk_IDP->pair);
+
+    element_init_G1(res_sigma_c->A, *pk_IDP->pair);
+
+    element_init_G1(res_sigma_c->middle_res, *pk_IDP->pair);
+
+    char* tmp_buffer = data_buffer;
+
+    int tmp_len = 0;
+
+    tmp_len = element_from_bytes(res_sigma_c->x, tmp_buffer);
+    tmp_buffer += tmp_len;
+
+    tmp_len = element_from_bytes(res_sigma_c->s, tmp_buffer);
+    tmp_buffer += tmp_len;
+
+    tmp_len = element_from_bytes(res_sigma_c->A, tmp_buffer);
+    tmp_buffer += tmp_len;
+
+    tmp_len = element_from_bytes(res_sigma_c->middle_res, tmp_buffer);
+    tmp_buffer += tmp_len;
+
+    // successfully get the target result.
+    return res_sigma_c;
 }

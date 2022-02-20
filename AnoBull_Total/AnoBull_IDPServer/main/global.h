@@ -13,10 +13,12 @@
 struct secret_key_IDP* sk_IDP;
 struct public_key_IDP* pk_IDP;
 struct config_structure* all_config;
+struct list* pub_list;
 #else
 extern struct secret_key_IDP* sk_IDP;
 extern struct public_key_IDP* pk_IDP;
-struct config_structure* all_config;
+extern struct config_structure* all_config;
+extern struct list* pub_list;
 #endif
 
 
