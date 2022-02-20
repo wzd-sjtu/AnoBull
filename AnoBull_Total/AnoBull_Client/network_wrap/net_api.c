@@ -1,6 +1,9 @@
 #include "net_api.h"
 #include "stdint_p.h"
 #include "all_def.h"
+#include "stdio.h"
+#include "stdlib.h"
+#include "string.h"
 
 // 返回连接后形成的套接字
 int connect_IDP_server() {
@@ -156,4 +159,130 @@ struct list* ask_user_info_infra(int sockfd, char* buf_recv, char* buf_send) {
     }
     // 直接返回生成的公钥即可
     return res_list;
+}
+
+void fill_up_user_info(char* input_buffer, struct list* user_info_infra, int input_length_limit) {
+    struct list_node* tmp_node = user_info_infra->vir_head->next;
+    
+    // 当然也可以从键盘读入
+    // 也可以从配置文件读入
+    // 也可以输入空，如果默认为空，那么可以加入一些别的信息
+    while(tmp_node != user_info_infra->vir_tail) {
+        
+        printf("please type your %s(", (char*)tmp_node->val1);
+        printf((char*)tmp_node->val3);
+        printf(")::\n");
+
+        // 这里会自带反斜杠零
+        // 读取非换行符，不会有'\0'
+        int in_len = scanf("%[^\n]", input_buffer);
+        // 取掉多余的换行符
+        getchar();
+
+        // input_buffer[in_len] = '\0';
+        printf("receive thing is %s\n", input_buffer);
+        if(in_len == 0) {
+            strcpy(input_buffer, "empty input");
+        }
+        // printf("receive data is %s\n", input_buffer);
+        // printf("the length of buffer is %d", strlen(input_buffer));
+
+        char* tmp_str = malloc(strlen(input_buffer) + 1);
+        strcpy(tmp_str, input_buffer);
+
+        tmp_node->val2 = tmp_str;
+
+        // 至此完成内容的输入
+        tmp_node = tmp_node->next;
+    }
+
+    return;
+}
+
+int send_user_info_to_IDP(int sockfd, char* buf_recv, char* buf_send, struct list* user_info_fra_list) {
+
+    // 取出链表
+    // 遍历存入缓冲区
+
+    struct protocol_header* tmp_header = (struct protocol_header*) buf_send;
+    memset(tmp_header, 0, sizeof(struct protocol_header));
+    // 请求公钥
+    tmp_header->sig_pro = 3;
+    tmp_header->state = 3;
+    char* data_point = (char*)(buf_send + HEADER_LEN);
+
+
+    struct list_node* head = user_info_fra_list->vir_head->next;
+    struct list_node* tail = user_info_fra_list->vir_tail;
+
+    int total_len = 0;
+    int loc_i = 0;
+
+    char* name = NULL;
+    char* value = NULL;
+    char* buf_tmp = data_point;
+
+
+    while(head != tail) {
+        // 将信息填入缓冲区
+        // 由于strcpy缺陷，选择手动进行
+        
+        name = (char*)head->val1;
+        value = (char*)head->val2;
+
+        // printf("name and value is %s and %s\n", name, value);
+
+        loc_i = 0;
+        while(name[loc_i] != '\0') {
+            *buf_tmp = name[loc_i];
+            buf_tmp++;
+            total_len++;
+            loc_i++;
+        }
+        total_len++;
+        *buf_tmp = '=';
+        buf_tmp++;
+
+        loc_i = 0;
+        while(value[loc_i] != '\0') {
+            *buf_tmp = value[loc_i];
+            buf_tmp++;
+            total_len++;
+            loc_i++;
+        }
+
+        total_len++;
+        // use the blank to split the data here
+        *buf_tmp = '\0';
+        buf_tmp++;
+
+        head = head->next;
+    }
+    tmp_header->length = total_len++;
+
+    // 全部存入缓冲区，直接发送即可
+
+
+    int num = send(sockfd, buf_send, HEADER_LEN + tmp_header->length, 0);
+
+    if(num == -1) {
+        printf("send failed!\n");
+        return NULL;
+    }
+
+    // 对于收到的数据，直接解析数据区即可
+
+    num = recv(sockfd, buf_recv, MAX_LINE_BUFFER, 0);
+    printf("recv num is %d\n", num);
+
+    struct protocol_header* recv_header = (struct protocol_header*) buf_recv;
+    char* recv_data = (char*)(buf_recv + HEADER_LEN);
+    recv_data[recv_header->length] = '\0';
+
+    if(tmp_header->state == 3) {
+        printf("server reply:%s\n", recv_data);
+    }
+
+    // 返回值为1，表示发送成功，并且接收到服务器的回复
+    return 1;
 }

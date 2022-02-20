@@ -156,3 +156,24 @@ struct sigma_c* compute_sigma_c(element_t* m_vector, struct public_key_IDP* pk_I
     return signature_c;
 }
 
+// 将list转换为对应的vector
+element_t* convert_info_to_vector(struct list* user_info_list_specific, struct public_key_IDP* pk_IDP) {
+    // element_init_Zr
+
+    // 信息序列的维度
+    int N = pk_IDP->total_num_of_h_i;
+    element_t* m_vector = malloc(N*sizeof(element_t));
+    for(int i=0; i<N; i++) {
+        element_init_Zr(m_vector, *pk_IDP->pair);
+    }
+
+    // 进行维度映射
+    struct list_node* tmp_node = user_info_list_specific->vir_head->next;
+    for(int i=0; i<N; i++) {
+        // 进行简单的映射
+        // void element_from_hash(element_t e, void *data, int len)
+        element_from_hash(m_vector[i], (char*)tmp_node->val2, strlen(tmp_node->val2));
+    }
+    // 完成内容的拼写，为后文的传送打下一定的基础
+    return m_vector;
+}

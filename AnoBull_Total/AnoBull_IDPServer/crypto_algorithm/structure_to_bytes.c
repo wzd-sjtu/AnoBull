@@ -284,3 +284,9 @@ int comapre_pk_IDP(struct public_key_IDP* new_pk_IDP) {
 
 
 // a lot of unsolved problem just take place!
+
+int sigma_c_to_bytes(struct sigma_c* will_send_sigma_c) {
+    // another convert function
+    // which is always complex for me to build it.
+    
+}

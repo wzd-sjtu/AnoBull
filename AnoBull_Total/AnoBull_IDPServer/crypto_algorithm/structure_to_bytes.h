@@ -9,4 +9,6 @@ int pk_IDP_to_bytes(char* thread_send_buffer, int data_len_limit);
 struct public_key_IDP* pk_IDP_from_bytes(unsigned char* data_buffer, int length);
 int comapre_pk_IDP(struct public_key_IDP* new_pk_IDP);
 
+int sigma_c_to_bytes(struct sigma_c* will_send_sigma_c);
+
 #endif

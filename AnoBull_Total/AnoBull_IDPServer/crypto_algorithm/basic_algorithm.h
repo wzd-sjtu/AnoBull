@@ -20,6 +20,7 @@ int is_hidden(char* select_vector, int loc);
 // void hash_SHA256(unsigned char* data_buffer, int length, unsigned char result[]);
 struct sigma_c* compute_sigma_c(element_t* m_vector, struct public_key_IDP* pk_IDP, \
  struct secret_key_IDP* sk_IDP);
- 
+
+element_t* convert_info_to_vector(struct list* user_info_list_specific, struct public_key_IDP* pk_IDP);
 
 #endif

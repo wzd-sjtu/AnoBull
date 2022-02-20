@@ -180,6 +180,8 @@ struct config_structure* read_config_init() {
 
         }
     }
+    // 多读了一个配置参数
+    pop_front(test_config_stru->user_info_list);
 
     // 下面再进行数字转换
     // int number_of_char = 0;
@@ -190,6 +192,8 @@ struct config_structure* read_config_init() {
 
 
     // 处理完记得关闭文件流
+
+    
     fclose(config_file);
 
     return test_config_stru;

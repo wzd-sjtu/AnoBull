@@ -44,6 +44,13 @@ int main() {
     }
 
     // 下面可以对内容进行填入了！
+    // 收到信息后，需要填充有关的内容？
+
+    char input_buffer[1024] = {0};
+    // 一个void函数，获取用户输入输出缓冲区
+    fill_up_user_info(input_buffer, user_info_infra, 1024);
+
+    send_user_info_to_IDP(sockfd, buf_recv, buf_send, user_info_infra);
 
     close(sockfd);
 
