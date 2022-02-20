@@ -314,6 +314,7 @@ struct sigma_c* ask_compute_sigma_c(int sockfd, char* buf_recv, char* buf_send, 
     num = recv(sockfd, buf_recv, MAX_LINE_BUFFER, 0);
     printf("recv num is %d\n", num);
 
+    // m_0 与 m_1的地位是完全不同的
     struct protocol_header* recv_header = (struct protocol_header*) buf_recv;
     char* recv_data = (char*)(buf_recv + HEADER_LEN);
 

@@ -71,7 +71,11 @@ int main() {
     
     int info_dimention = test_config_specific->user_info_list->list_num;
     printf("info dimention is %d\n", info_dimention);
+
+    // 这里的维度需要重点考虑，之前写成一样的，其实是在偷懒。。
+    // pk_IDP = init_IDP_public_key(pair_choice, info_dimention + 1, sk_IDP);
     pk_IDP = init_IDP_public_key(pair_choice, info_dimention, sk_IDP);
+
     printf("Gene public_key and Gene secret_key successfully!\n");
     
     /*

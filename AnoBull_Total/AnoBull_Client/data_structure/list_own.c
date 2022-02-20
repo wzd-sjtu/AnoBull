@@ -104,3 +104,20 @@ struct list_node* pop_back(struct list* my_list) {
 
     return tmp;
 }
+
+void traverse_show_list(struct list* my_list) {
+    struct list_node* tmp = my_list->vir_head->next;
+    while(tmp != my_list->vir_tail) {
+        printf("data is:");
+        if(tmp->val1 != NULL)
+            printf("%s=", (char*)tmp->val1);
+        if(tmp->val2 != NULL)
+            printf("%s=", (char*)tmp->val2);
+        if(tmp->val3 != NULL)
+            printf("%s=", (char*)tmp->val3);
+        printf("\n");
+
+        tmp = tmp->next;
+    }
+    return;
+}

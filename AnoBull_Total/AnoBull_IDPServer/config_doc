@@ -12,6 +12,7 @@ max_connect_thread_num = 10
 # 后面是一大段连续的信息，表示用户信息
 # 格式为：（先暂时仅支持纯英文），以4个空格间隔，表示用户的信息结构，最好不要换行
 user_info_structure = Active
+h0_info = empty(no need to implement)
 name = name of you(no more than 20 character)
 gender = gender(man or woman)
 age = just put number in [0, 150]

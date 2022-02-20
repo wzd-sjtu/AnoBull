@@ -9,6 +9,8 @@
 #include "Elliptic_Curve.h"
 #include "basic_algorithm.h"
 
+#include "test.h"
+
 int main() {
 
     printf("client start!\n");
@@ -57,6 +59,37 @@ int main() {
     struct sigma_c* res_sigma_c = ask_compute_sigma_c(sockfd, buf_recv, buf_send, tmp_pk_IDP);
     
     close(sockfd);
+
+    printf("user info length is %d\n", user_info_infra->list_num);
+    printf("pk_IDP's length is %d\n", tmp_pk_IDP->total_num_of_h_i);
+
+
+    // 本地计算sigma，作为重要的匿名凭证
+    char* selector_vector = (char*)malloc(tmp_pk_IDP->total_num_of_h_i);
+    selector_vector[2] = 1;
+    selector_vector[3] = 1;
+
+    // struct sigma* compute_sigma(struct sigma_c* signature_c, struct public_key_IDP* pk_IDP, \
+       element_t* m_vector, char* select_vector);
+
+    // 惊讶！这里居然没有生成m_vector的函数，最好再包装一下？？
+
+    // element_t* convert_info_to_vector(struct list* user_info_list_specific, struct public_key_IDP* pk_IDP);
+
+    element_t* m_vector = convert_info_to_vector(user_info_infra, tmp_pk_IDP);
+
+    struct sigma* res_sigma = compute_sigma(res_sigma_c, tmp_pk_IDP, m_vector, selector_vector);
+
+    // 下面对计算得到的sigma做一个检验
+
+    // 检验服务器生成的初始匿名凭证
+    verify_sigma_c_equation_1(res_sigma_c, tmp_pk_IDP);
+    // 检验自己计算生成的匿名凭证
+    
+
+    // 不妨设计状态5，作为RP最终的身份验证环节吧
+    // 实际上最好把这个信息传送过去，从而降低整个程序运行的开销
+    RP_verify(res_sigma, m_vector, selector_vector,tmp_pk_IDP);
 
     while(1) {
 

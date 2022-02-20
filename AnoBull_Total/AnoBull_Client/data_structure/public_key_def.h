@@ -21,6 +21,7 @@ struct public_key_IDP {
     element_t omega;
 
     // G1
+    // h是从0开始的，但是list的数量是未知的
     element_t* h_vector;
     // G1
     element_t g1;

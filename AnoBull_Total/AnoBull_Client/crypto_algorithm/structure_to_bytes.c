@@ -140,3 +140,5 @@ struct sigma_c* sigma_c_from_bytes(char* data_buffer, int length, struct public_
     // successfully get the target result.
     return res_sigma_c;
 }
+
+

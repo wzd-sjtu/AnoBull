@@ -400,7 +400,6 @@ int process_recv(char* thread_recv_buffer, char* thread_send_buffer, int recv_le
             
             // N会在pk_IDP内完成设置
 
-
             // 这里的无锁全局变量很危险，最好存入数据库
             // traverse_show_list(pub_list);
 
