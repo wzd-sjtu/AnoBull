@@ -39,9 +39,9 @@ int main() {
     // 不会改动的全局变量，可以并行读取
     all_config = test_config_specific;
     // 打印所选择的椭圆曲线
-    // printf(test_config_specific->Elliptic_Curve_Selection);
-    // printf(test_config_specific->Elliptic_Curve_Selection);printf("\n");
-    // printf(test_config_specific->IP_address);printf("\n");
+    printf(test_config_specific->Elliptic_Curve_Selection);
+    printf(test_config_specific->Elliptic_Curve_Selection);printf("\n");
+    printf(test_config_specific->IP_address);printf("\n");
 
     // printf("length of curve is %d\n", strlen(test_config_specific->Elliptic_Curve_Selection));
 
@@ -108,7 +108,7 @@ int main() {
     // 确实进入了服务器，但还是不明白这里的logic是什么情况
     start_main_server(test_config_specific, IDP_thread_pool);
 
-
+    // how to printf the assign time？ this is temporaryly unknown.
     printf("some error happened!\n");
     while(1) {
         // printf("some error happened!\n");

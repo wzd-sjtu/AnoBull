@@ -342,3 +342,6 @@ struct sigma_c* sigma_c_from_bytes(char* data_buffer, int length, struct public_
     // successfully get the target result.
     return res_sigma_c;
 }
+
+
+// 这里还需要别的api来做相关的处理的哦。

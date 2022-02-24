@@ -255,6 +255,7 @@ struct list* recv_user_info_list(char* recv_data, struct protocol_header* recv_h
     return tmp_list;
 }
 
+// 提前留下的接口，专门用于数据的持久化处理
 int store_user_info(struct list* user_info_list) {
     // 这里和上文的另一个函数会非常地相似
 
@@ -461,7 +462,9 @@ void start_main_server(struct config_structure* config_stru_example, threadpool 
     // 网络部分的架构不应该放在这一部分实现，位置有误
     // 正式进入while循环服务器
 	for(;;) {
+        // printf("begin accept!\n");
 		connfd=accept(sockfd,(struct sockaddr *)&cli_addr, &sin_size);
+        // printf("end accept!\n");
 		if(connfd<0) {
 			printf("accept error.\n");
 			continue;
@@ -471,5 +474,6 @@ void start_main_server(struct config_structure* config_stru_example, threadpool 
 		}
         // int thpool_add_work(threadpool, void (*function_p)(void*), void* arg_p);
         thpool_add_work(IDP_thread_pool, Thread_function, (void*)connfd);
+        // thpool就是线程池
 	}
 }

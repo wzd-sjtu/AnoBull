@@ -115,10 +115,14 @@ struct sigma_c* compute_sigma_c(element_t* m_vector, struct public_key_IDP* pk_I
     element_t parcel;
     element_init_G1(parcel, *pk_IDP->pair);
 
+        // h_0 ^ s
     element_pow_zn(parcel, pk_IDP->h_vector[0], signature_c->s);
     element_set(res, parcel);
 
     int N = pk_IDP->total_num_of_h_i;
+        // h_0 ^ s \sum h_i ^ m_i(仅仅涉及公开信息m_i)
+
+        // 关于selector_vector的注意范围是？暂时是不太清楚的了
     for(int i=1; i<N; i++) {
         element_pow_zn(parcel, pk_IDP->h_vector[i], m_vector[i]);
         element_mul(res, res, parcel);

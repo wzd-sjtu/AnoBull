@@ -17,7 +17,9 @@ OBJS = $(BUILD_DIR)/main.o \
 	$(BUILD_DIR)/thread_pool.o \
 	$(BUILD_DIR)/Elliptic_Curve.o \
 	$(BUILD_DIR)/server_api.o \
-	$(BUILD_DIR)/structure_to_bytes.o
+	$(BUILD_DIR)/structure_to_bytes.o \
+	\
+	$(BUILD_DIR)/database/sqlite.o
 
 ALL_DEPENDENCIES_H = config/read_config.h config/Elliptic_Curve.h\
 	crypto_algorithm/basic_algorithm.h crypto_algorithm/structure_to_bytes.h \
@@ -25,9 +27,11 @@ ALL_DEPENDENCIES_H = config/read_config.h config/Elliptic_Curve.h\
 	main/global.h main/main.h main/stdint_p.h \
 	test/test.h \
 	thread_pool/thread_pool.h \
-	network_wrap/server_api.h network_wrap/protocol_structure.h
+	network_wrap/server_api.h network_wrap/protocol_structure.h \
+	database/sqlite/sqlite.h
 
-OUTSIDE_LIB = -L. -l gmp -l pbc -l crypto -pthread
+# OUTSIDE_LIB = -L. -l gmp -l pbc -l crypto -pthread  -ldl参数专门是给sqlite编译用的
+OUTSIDE_LIB = -L. -l gmp -l pbc -l crypto -pthread -ldl
 
 ## compile for c code ##
 
@@ -54,6 +58,10 @@ $(BUILD_DIR)/structure_to_bytes.o: crypto_algorithm/structure_to_bytes.c $(ALL_D
 
 $(BUILD_DIR)/thread_pool.o: thread_pool/thread_pool.c $(ALL_DEPENDENCIES_H)
 	$(CC) $(CFLAGS) -D THPOOL_DEBUG $< -o $@
+
+$(BUILD_DIR)/database/sqlite.o: database/sqlite/sqlite.c $(ALL_DEPENDENCIES_H)
+	$(CC) $(CFLAGS) $< -o $@
+
 # Elliptic_Curve.h
 
 
