@@ -12,6 +12,7 @@
 // to some fixed space yes!
 struct public_key_IDP {
 
+    // 这里明显有很大的问题了，我裂开了，从零开始or不从零开始？
     int total_num_of_h_i;
 
     // pair 是采用的群，是最重要的变量

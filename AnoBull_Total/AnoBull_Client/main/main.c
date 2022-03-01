@@ -72,6 +72,8 @@ int main() {
 
 
     // 本地计算sigma，作为重要的匿名凭证
+    // selector_vector的维度是从0-(N)，一共有N+1的维度
+    // 这个设计让人很难受
     char* selector_vector = (char*)malloc(tmp_pk_IDP->total_num_of_h_i);
     selector_vector[2] = 1;
     selector_vector[3] = 1;
@@ -83,8 +85,10 @@ int main() {
 
     // element_t* convert_info_to_vector(struct list* user_info_list_specific, struct public_key_IDP* pk_IDP);
 
+    // 已经完成了最基本的copy了，裂开！
     element_t* m_vector = convert_info_to_vector(user_info_infra, tmp_pk_IDP);
 
+    // 不妨直接把m_vector给映射过去
     struct sigma* res_sigma = compute_sigma(res_sigma_c, tmp_pk_IDP, m_vector, selector_vector);
 
     // 下面对计算得到的sigma做一个检验
@@ -96,7 +100,13 @@ int main() {
 
     // 不妨设计状态5，作为RP最终的身份验证环节吧
     // 实际上最好把这个信息传送过去，从而降低整个程序运行的开销
-    RP_verify(res_sigma, m_vector, selector_vector,tmp_pk_IDP);
+
+    // m_vector是否要发送过去？将m_vector存储为对应的链表即可，对的了
+    RP_verify(res_sigma, m_vector, selector_vector, tmp_pk_IDP);
+
+
+    int final_ret = ask_related_service(buf_send, res_sigma, m_vector, selector_vector, tmp_pk_IDP);
+
 
     while(1) {
 

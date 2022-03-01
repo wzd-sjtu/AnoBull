@@ -142,3 +142,112 @@ struct sigma_c* sigma_c_from_bytes(char* data_buffer, int length, struct public_
 }
 
 
+int sigma_to_bytes(struct sigma* will_send_sigma, char* data_buffer, int data_len_limit, struct public_key_IDP* pk_IDP) {
+    // another convert function
+    // which is always complex for me to build it.
+    int tmp_store_len = 0;
+    int total_len = 0;
+
+    char* tmp_buffer = data_buffer;
+    tmp_store_len = element_to_bytes(data_buffer, will_send_sigma->A_plus);
+    total_len += tmp_store_len;
+    
+    data_buffer += tmp_store_len;
+    tmp_store_len = element_to_bytes(data_buffer, will_send_sigma->A_ba);
+    total_len += tmp_store_len;
+
+    data_buffer += tmp_store_len;
+    tmp_store_len = element_to_bytes(data_buffer, will_send_sigma->d);
+    total_len += tmp_store_len;
+
+    data_buffer += tmp_store_len;
+    tmp_store_len = element_to_bytes(data_buffer, will_send_sigma->c);
+    total_len += tmp_store_len;
+
+    data_buffer += tmp_store_len;
+    tmp_store_len = element_to_bytes(data_buffer, will_send_sigma->z_x);
+    total_len += tmp_store_len;
+
+    data_buffer += tmp_store_len;
+    tmp_store_len = element_to_bytes(data_buffer, will_send_sigma->z_r);
+    total_len += tmp_store_len;
+
+    data_buffer += tmp_store_len;
+    tmp_store_len = element_to_bytes(data_buffer, will_send_sigma->z_alpha);
+    total_len += tmp_store_len;
+
+    data_buffer += tmp_store_len;
+    tmp_store_len = element_to_bytes(data_buffer, will_send_sigma->z_beta);
+    total_len += tmp_store_len;
+
+    int N = pk_IDP->total_num_of_h_i;
+    for(int i=0; i<N; i++) {
+        data_buffer += tmp_store_len;
+        tmp_store_len = element_to_bytes(data_buffer, will_send_sigma->z_i_hidden[i]);
+        total_len += tmp_store_len;
+    }
+
+    // 最终完成整个数据结构的存储
+    return total_len;
+}
+
+
+struct sigma* sigma_from_bytes(char* data_buffer, int length, struct public_key_IDP* pk_IDP) {
+    // another convert function
+    // which is always complex for me to build it.
+
+    // 进行了无脑的数组串的转化与生成
+    struct sigma* res_sigma = (struct sigma*)malloc(sizeof(struct sigma));
+
+    
+
+    element_init_G1(res_sigma->A_plus, *pk_IDP->pair);
+    element_init_G1(res_sigma->A_ba, *pk_IDP->pair);
+    element_init_G1(res_sigma->d, *pk_IDP->pair);
+    element_init_G1(res_sigma->c, *pk_IDP->pair);
+
+    element_init_Zr(res_sigma->z_x, *pk_IDP->pair);
+    element_init_Zr(res_sigma->z_r, *pk_IDP->pair);
+    element_init_Zr(res_sigma->z_alpha, *pk_IDP->pair);
+    element_init_Zr(res_sigma->z_beta, *pk_IDP->pair);
+
+    int N = pk_IDP->total_num_of_h_i;
+
+    for(int i=0; i<N; i++) {
+        element_init_Zr(res_sigma->z_i_hidden[i], *pk_IDP->pair);
+    }
+
+    char* tmp_buffer = data_buffer;
+    int tmp_len = 0;
+
+    tmp_len = element_from_bytes(res_sigma_c->A_plus, tmp_buffer);
+    tmp_buffer += tmp_len;
+
+    tmp_len = element_from_bytes(res_sigma_c->A_ba, tmp_buffer);
+    tmp_buffer += tmp_len;
+
+    tmp_len = element_from_bytes(res_sigma_c->d, tmp_buffer);
+    tmp_buffer += tmp_len;
+
+    tmp_len = element_from_bytes(res_sigma_c->c, tmp_buffer);
+    tmp_buffer += tmp_len;
+
+    tmp_len = element_from_bytes(res_sigma_c->z_x, tmp_buffer);
+    tmp_buffer += tmp_len;
+
+    tmp_len = element_from_bytes(res_sigma_c->z_r, tmp_buffer);
+    tmp_buffer += tmp_len;
+
+    tmp_len = element_from_bytes(res_sigma_c->z_alpha, tmp_buffer);
+    tmp_buffer += tmp_len;
+
+    tmp_len = element_from_bytes(res_sigma_c->z_beta, tmp_buffer);
+    tmp_buffer += tmp_len;
+
+    for(int i=0; i<N; i++) {
+        tmp_len = element_from_bytes(res_sigma_c->z_i_hidden[i], tmp_buffer);
+        tmp_buffer += tmp_len;
+    }
+
+    return res_sigma;
+}

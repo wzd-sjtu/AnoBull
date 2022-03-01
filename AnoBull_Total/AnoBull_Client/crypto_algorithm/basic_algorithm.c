@@ -55,8 +55,11 @@ element_t* convert_info_to_vector(struct list* user_info_list_specific, struct p
     // traverse_show_list(user_info_list_specific);
     struct list_node* tmp_node = user_info_list_specific->vir_head->next;
     
-    
-    for(int i=0; i<N; i++) {
+
+
+    // 这里很明显要分类讨论啦！
+    element_from_hash(m_vector[0], "empty location", strlen("empty location"));
+    for(int i=1; i<N; i++) {
         // 进行简单的映射
         // void element_from_hash(element_t e, void *data, int len)
         element_from_hash(m_vector[i], (char*)tmp_node->val2, strlen((char*)tmp_node->val2));
@@ -301,9 +304,12 @@ struct sigma* compute_sigma(struct sigma_c* signature_c, struct public_key_IDP* 
 
     // z_i
     // 最好的方式便是做减法即可
+    // z_i的起始位置来自于location 1
+    // location 0其实被忽略了，在这里的逻辑中
     signature->z_i_hidden = (element_t *)malloc(N*sizeof(element_t));
 
     element_init_Zr(signature->z_i_hidden[0], *pk_IDP->pair);
+    element_random(signature->z_i_hidden[0]);
     for(int i=1; i<N; i++) {
         // 不论如何，采用全部初始化的原则
         element_init_Zr(signature->z_i_hidden[i], *pk_IDP->pair);
@@ -484,4 +490,18 @@ int RP_verify(struct sigma* signature, element_t* m_vector, char* select_vector,
 
     free(data_buffer);
     return 1;
+}
+
+
+// 又是基本的信息之间的互相转换
+struct list* convert_selector_vector_to_list(element_t* m_vector, char* selector_vector, struct public_key_IDP* pk_IDP) {
+    // 这里涉及了最基本的information存在啦
+    struct list* res_list = init_list();
+    // 对list进行初始化
+    // 之后把list完成基本的存储进去
+    // 下面进行最基本的信息insert
+    int N = pk_IDP->total_num_of_h_i;
+    // 这个number需要进行合理的设计，否则会出大问题！
+
+    return NULL;
 }
