@@ -2,7 +2,8 @@ BUILD_DIR = ./build
 CC = gcc
 # 使用gcc进行链接link
 LD = gcc
-LIB = -I data_structure/ -I lib/ -I main/ -I test/ -I config/ -I crypto_algorithm/ -I thread_pool/ -I network_wrap/
+LIB = -I data_structure/ -I lib/ -I main/ -I test/ -I config/ -I crypto_algorithm/ -I thread_pool/ -I network_wrap/ -I database/Dao \
+	-I database/sqlite
 # -fno-builtin 防止和系统函数冲突
 # -fno-stack_protector -fstack-protector-all(启用堆栈保护)
 CFLAGS = $(LIB) -c -g -fstack-protector-all
@@ -19,7 +20,9 @@ OBJS = $(BUILD_DIR)/main.o \
 	$(BUILD_DIR)/server_api.o \
 	$(BUILD_DIR)/structure_to_bytes.o \
 	\
-	$(BUILD_DIR)/database/sqlite.o
+	$(BUILD_DIR)/database/sqlite.o \
+	$(BUILD_DIR)/sqlite3_use.o \
+	$(BUILD_DIR)/userinfo_dao.o
 
 ALL_DEPENDENCIES_H = config/read_config.h config/Elliptic_Curve.h\
 	crypto_algorithm/basic_algorithm.h crypto_algorithm/structure_to_bytes.h \
@@ -28,7 +31,9 @@ ALL_DEPENDENCIES_H = config/read_config.h config/Elliptic_Curve.h\
 	test/test.h \
 	thread_pool/thread_pool.h \
 	network_wrap/server_api.h network_wrap/protocol_structure.h \
-	database/sqlite/sqlite.h
+	database/sqlite/sqlite.h \
+	database/Dao/sqlite3_use.h database/Dao/userinfo_dao.h \
+	main/server_config.h
 
 # OUTSIDE_LIB = -L. -l gmp -l pbc -l crypto -pthread  -ldl参数专门是给sqlite编译用的
 OUTSIDE_LIB = -L. -l gmp -l pbc -l crypto -pthread -ldl
@@ -62,6 +67,11 @@ $(BUILD_DIR)/thread_pool.o: thread_pool/thread_pool.c $(ALL_DEPENDENCIES_H)
 $(BUILD_DIR)/database/sqlite.o: database/sqlite/sqlite.c $(ALL_DEPENDENCIES_H)
 	$(CC) $(CFLAGS) $< -o $@
 
+$(BUILD_DIR)/sqlite3_use.o: database/Dao/sqlite3_use.c $(ALL_DEPENDENCIES_H)
+	$(CC) $(CFLAGS) $< -o $@
+# 数据库的可持久化处理操作
+$(BUILD_DIR)/userinfo_dao.o: database/Dao/userinfo_dao.c $(ALL_DEPENDENCIES_H)
+	$(CC) $(CFLAGS) $< -o $@
 # Elliptic_Curve.h
 
 
@@ -69,13 +79,13 @@ $(BUILD_DIR)/main.o: main/main.c $(ALL_DEPENDENCIES_H)
 	$(CC) $(CFLAGS) $< -o $@
 
 ## link all files ##
-$(BUILD_DIR)/IDP_kernel.bin: $(OBJS)
+$(BUILD_DIR)/Server.bin: $(OBJS)
 	$(LD) $(LDFLAGS) $^ -o $@ $(OUTSIDE_LIB)
 
 ## make all files
-all:$(BUILD_DIR)/IDP_kernel.bin
+all:$(BUILD_DIR)/Server.bin
 	echo "compile and link successfully!"
-	./build/IDP_kernel.bin
+	./build/Server.bin
 clean:
 	rm build/*.o
 	rm build/*.bin

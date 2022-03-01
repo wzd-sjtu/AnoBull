@@ -18,6 +18,10 @@
 
 #include "structure_to_bytes.h"
 
+#include "server_config.h"
+#include "sqlite.h"
+#include "sqlite3_use.h"
+
 // 需要使用的算法
 
 int main() {
@@ -39,17 +43,17 @@ int main() {
     // 不会改动的全局变量，可以并行读取
     all_config = test_config_specific;
     // 打印所选择的椭圆曲线
-    printf(test_config_specific->Elliptic_Curve_Selection);
-    printf(test_config_specific->Elliptic_Curve_Selection);printf("\n");
-    printf(test_config_specific->IP_address);printf("\n");
+    // printf(test_config_specific->Elliptic_Curve_Selection);
+    // printf(test_config_specific->Elliptic_Curve_Selection);printf("\n");
+    // printf(test_config_specific->IP_address);printf("\n");
 
     // printf("length of curve is %d\n", strlen(test_config_specific->Elliptic_Curve_Selection));
 
     // printf("num is %d\n", test_config_specific->port_num);
     // printf("max thread is %d\n", test_config_specific->max_connect_thread_number_num);
-
+    
     // whether it is successfully? this is always unknown...
-    printf("config set init successfully!\n");
+    printf("[INFO] config set init successfully!\n");
 
     // pairing_t* init_space(char* curve_name);
     // struct secret_key_IDP* init_IDP_secret_key(pairing_t* pairing);
@@ -59,10 +63,27 @@ int main() {
     // pairing_t* pair_choice = init_space(test_config_specific->Elliptic_Curve_Selection);
     
 
+    // 完成config初始化后，需要对数据库做初始化
+    // 下面对数据库做相应的初始化操作
+    // sqlite3* 指针变量存放在global文件内
+    int sql_ret = sqlite_init(DB_PATH);
+    if (sql_ret != SQLITE_OK) {
+		perror("[ERROR] database_init sqlite_initalize error\n");
+		return -1;;
+	}
+    printf("[INFO] sqlite init successfully!\n");
+    sql_ret = create_table_by_list(test_config_specific->user_info_list);
+    
+    // 处理完数据库之后，记得关闭它
+    // sqlite3_close(db);
+
+    // 此处需要进行最基本的建表操作
+
+    // 群初始化
     pairing_t* pair_choice =NULL;
     pair_choice = init_space("D224");
     if(pair_choice == NULL) {
-        printf("pair you have chosen is not existing.");
+        printf("[INFO] pair you have chosen is not existing.\n");
         return 0;
     }
 
@@ -70,13 +91,15 @@ int main() {
     sk_IDP = init_IDP_secret_key(pair_choice);
     
     int info_dimention = test_config_specific->user_info_list->list_num;
-    printf("info dimention is %d\n", info_dimention);
+    printf("[INFO] info dimention is %d\n", info_dimention);
 
     // 这里的维度需要重点考虑，之前写成一样的，其实是在偷懒。。
     // pk_IDP = init_IDP_public_key(pair_choice, info_dimention + 1, sk_IDP);
     pk_IDP = init_IDP_public_key(pair_choice, info_dimention, sk_IDP);
+    
 
-    printf("Gene public_key and Gene secret_key successfully!\n");
+
+    // printf("[INFO] Gene public_key and Gene secret_key successfully!\n");
     
     /*
     char test_char[4098] = {0};
@@ -95,7 +118,7 @@ int main() {
     
     // 这里有个小问题，用的是uint转换为int，可能会存在溢出？
     threadpool IDP_thread_pool = thpool_init((int)test_config_specific->max_connect_thread_number_num);
-    printf("thread pool completed!\n");
+    printf("[INFO] thread pool completed!\n");
     // 线程池API
     // int thpool_add_work(threadpool, void (*function_p)(void*), void* arg_p);
     // void thpool_wait(threadpool);
@@ -104,8 +127,10 @@ int main() {
 
 
     // 正式进入服务器，线程池服务器
-    printf("初始化完成，进入服务器\n");
+    printf("[INFO] 初始化完成，进入服务器\n");
     // 确实进入了服务器，但还是不明白这里的logic是什么情况
+
+    printf("[INFO] server ip address is %s\n", test_config_specific->IP_address);
     start_main_server(test_config_specific, IDP_thread_pool);
 
     // how to printf the assign time？ this is temporaryly unknown.

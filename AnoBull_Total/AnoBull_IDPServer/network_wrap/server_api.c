@@ -11,6 +11,8 @@
 #include "stdint_p.h"
 #include "all_def.h"
 #include "string.h"
+// 这里涉及到了具体的数据库存储方式
+#include "sqlite3_use.h"
 
 // socket+bind+listen
 int tcp_listen(int port)
@@ -56,7 +58,7 @@ void Thread_function(void* arg) {
 
     // 下面正式进入了多线程模型之中
 
-    printf("this is thread %d\n", clifd);
+    printf("[INFO] this is thread %d\n", clifd);
 
     // 网络编程缓冲区
     char thread_recv_buffer[MAX_LINE_BUFFER_THREAD] = {0};
@@ -98,28 +100,28 @@ void Thread_function(void* arg) {
         // 具体过程就是不断recv再不断send的过程
         // 这个是多线程里面最核心的内容
 
-        printf("begin recv:\n");
+        printf("[START] begin recv:\n");
         length = recv(clifd, thread_recv_buffer, MAX_LINE_BUFFER_THREAD, 0);
-        printf("receive length is %d\n", length);
+        printf("[END] receive length is %d\n", length);
         // 阻塞读入长度为0，出现了问题
         if(length <= 0) {
-            printf("read failed!\n");
+            printf("[ERROR] read failed!\n");
             return;
         }
         
 
         // 一旦读取到buffer，直接进入process_recv函数
         // 收到消息总要返回一些东西
-        printf("begin compute the send thing!\n");
+        printf("[START] begin compute the send thing!\n");
         length = process_recv(thread_recv_buffer, thread_send_buffer, length, para_transmit);
-        printf("send length is %d\n", length);
+        printf("[END] send length is %d\n", length);
 
         // (num=send(sockfd,buf,HEADER_LEN + tmp_header->length, 0)==-1)
         // length 即为最终的缓冲区长度
         length = send(clifd, thread_send_buffer, length, 0);
 
         if(length == -1) {
-            printf("send failed!\n");
+            printf("[ERROR] send failed!\n");
         }
 
     }
@@ -202,7 +204,21 @@ int store_user_info_infra(char* send_buffer, int data_len_limit) {
 }
 
 // 提前留下的接口，专门用于持久化存储的函数
-void store_sigma_c(struct sigma_c* will_send_sigma_c) {
+void store_sigma_c(char* sigma_c_buffer, int length, struct list* user_info_list) {
+
+    struct list_node* tmp_list_node = user_info_list->vir_head->next;
+    char* name_select = NULL;
+    while(tmp_list_node != user_info_list->vir_tail) {
+        if(strcmp(tmp_list_node->val1, "name") == 0) {
+            name_select = tmp_list_node->val2;
+            break;
+        }
+        tmp_list_node = tmp_list_node->next;
+    }
+    // store_sigma_c(will_send_sigma_c, user_info_list_specific);
+
+    // 需要构建一个表，外加一个对应的sigma_c
+    
     return;
 }
 struct list* recv_user_info_list(char* recv_data, struct protocol_header* recv_header) {
@@ -263,6 +279,10 @@ int store_user_info(struct list* user_info_list) {
     // 还可以选择给用户计算一个唯一的凭证标识
 
     // 现在就暂时把此处的代码给空置
+    // int insert_user_info_by_list(struct list* user_info_list)
+
+    insert_user_info_by_list(user_info_list);
+
     return 0;
 }
 
@@ -397,7 +417,7 @@ int process_recv(char* thread_recv_buffer, char* thread_send_buffer, int recv_le
             // 这里是服务器的核心logic，请求对应的匿名凭证签名
             // 收发信息已经封装，需要写的只有读写缓冲区
             recv_buffer[recv_header->length] = '\0';
-            printf("client request is:%s\n", recv_buffer);
+            printf("[INFO] client request is:%s\n", recv_buffer);
             
             // N会在pk_IDP内完成设置
 
@@ -411,11 +431,16 @@ int process_recv(char* thread_recv_buffer, char* thread_send_buffer, int recv_le
             // pub_list
             struct sigma_c* will_send_sigma_c = compute_sigma_c(m_vector, pk_IDP, sk_IDP);
             
-            // 进行持久化存储？
-            store_sigma_c(will_send_sigma_c);
 
             // 填入缓冲区
             int put_len = sigma_c_to_bytes(will_send_sigma_c, send_buffer, DATA_LEN);
+
+
+            // 进行持久化存储
+            // 存储这个sigma_c的意义是什么
+            // here的userinfo还是总是需要的
+            store_sigma_c(will_send_sigma_c, user_info_list_specific);
+
             // printf("put_len:%d\n", put_len);
             // 下面这个新功能需要先测试再进行添加处理了！
             // struct sigma_c* gg = sigma_c_from_bytes()
@@ -457,7 +482,7 @@ void start_main_server(struct config_structure* config_stru_example, threadpool 
 
     // 网络库的封装在这里非常地粗浅，先跑起来再说
     sockfd=tcp_listen(port);
-    printf("listening on %d\n",port);
+    printf("[INFO] listening on %d\n",port);
 	
     // 网络部分的架构不应该放在这一部分实现，位置有误
     // 正式进入while循环服务器
@@ -470,7 +495,7 @@ void start_main_server(struct config_structure* config_stru_example, threadpool 
 			continue;
 		}
 		else {
-			printf("generate the new socket connfd: %d \n", connfd);
+			printf("[INFO] generate the new socket connfd: %d \n", connfd);
 		}
         // int thpool_add_work(threadpool, void (*function_p)(void*), void* arg_p);
         thpool_add_work(IDP_thread_pool, Thread_function, (void*)connfd);

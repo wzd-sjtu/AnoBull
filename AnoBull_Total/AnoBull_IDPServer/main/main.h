@@ -24,4 +24,8 @@
 #include <linux/netfilter_ipv4.h>
 #include <stdarg.h>
 
+
+#include "sqlite.h"
+#include "global.h"
+
 #endif

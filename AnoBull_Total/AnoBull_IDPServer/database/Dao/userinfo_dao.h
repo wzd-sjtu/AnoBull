@@ -21,7 +21,7 @@ int get_user_info();
 
 // how to construct the all table? damn it!
 // directly 存储为一行即可
-int create_sigma_table(...);
+// int create_sigma_table(...);
 
 int insert_sigma();
 int delete_sigma();
