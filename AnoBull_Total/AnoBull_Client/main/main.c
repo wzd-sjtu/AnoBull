@@ -3,6 +3,7 @@
 #include "stdio.h"
 #include "string.h"
 
+#include "net_config.h"
 #include "net_api.h"
 #include "all_def.h"
 
@@ -13,7 +14,7 @@
 
 int main() {
 
-    printf("client start!\n");
+    printf("[INFO] client start!\n");
 
     // how to write the code here? tmply unknown.
 
@@ -26,8 +27,9 @@ int main() {
     char buf_send[MAX_LINE_BUFFER] = {0};
 
     sockfd = connect_IDP_server();
-
-    // printf("connect successfully!\n");
+    printf("[INFO] client ip is %s\n", USER_IP);
+    printf("[INFO] server ip is %s\n", SERVER_IP);
+    printf("[INFO] connect server successfully!\n");
     
     struct public_key_IDP* tmp_pk_IDP = ask_pk_IDP(sockfd, buf_recv, buf_send);
 
@@ -40,8 +42,8 @@ int main() {
 
     
     while(tmp != user_info_infra->vir_tail) {
-        printf("val name is %s\n", (char*)tmp->val1);
-        printf("description name is %s\n", (char*)tmp->val3);
+        // printf("val name is %s\n", (char*)tmp->val1);
+        // printf("description name is %s\n", (char*)tmp->val3);
         tmp = tmp->next;
     }
 
@@ -50,7 +52,12 @@ int main() {
 
     char input_buffer[1024] = {0};
     // 一个void函数，获取用户输入输出缓冲区
-    fill_up_user_info(input_buffer, user_info_infra, 1024);
+
+    // 键盘输入api
+    // fill_up_user_info(input_buffer, user_info_infra, 1024);
+
+    // 固定输入api
+    fill_up_user_info_automatic(input_buffer, user_info_infra, 1024);
 
     send_user_info_to_IDP(sockfd, buf_recv, buf_send, user_info_infra);
 
@@ -60,8 +67,8 @@ int main() {
     
     close(sockfd);
 
-    printf("user info length is %d\n", user_info_infra->list_num);
-    printf("pk_IDP's length is %d\n", tmp_pk_IDP->total_num_of_h_i);
+    // printf("user info length is %d\n", user_info_infra->list_num);
+    // printf("pk_IDP's length is %d\n", tmp_pk_IDP->total_num_of_h_i);
 
 
     // 本地计算sigma，作为重要的匿名凭证

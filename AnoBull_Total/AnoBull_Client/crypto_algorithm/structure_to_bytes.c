@@ -34,7 +34,7 @@ struct public_key_IDP* pk_IDP_from_bytes(unsigned char* data_buffer) {
     // using the pair choice to initialize the pair
     memcpy(pair_choice, tmp_buffer, pair_length);
     tmp_buffer += pair_length;
-    printf("pair choice is %s\n", pair_choice);
+    // printf("pair choice is %s\n", pair_choice);
 
     // printf("chosen group is ");
     // printf(pair_choice);
@@ -57,7 +57,7 @@ struct public_key_IDP* pk_IDP_from_bytes(unsigned char* data_buffer) {
     tmp_buffer += total_num_of_h_i_length;  // store into the length of idp
     int N = res_pk_IDP->total_num_of_h_i;
 
-    printf("chose h_vector dimentions are %d \n", N);
+    // printf("chose h_vector dimentions are %d \n", N);
 
     omega_length = element_from_bytes(res_pk_IDP->omega, tmp_buffer);
     tmp_buffer += omega_length;

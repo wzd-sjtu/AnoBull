@@ -50,7 +50,9 @@ element_t* convert_info_to_vector(struct list* user_info_list_specific, struct p
     // 进行维度映射
     // printf("begin compare it:\n");
     // printf("what happened?? num is %d\n", user_info_list_specific->list_num);
-    traverse_show_list(user_info_list_specific);
+
+    // 就是这里的traverse进行了遍历处理，头疼
+    // traverse_show_list(user_info_list_specific);
     struct list_node* tmp_node = user_info_list_specific->vir_head->next;
     
     

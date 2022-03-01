@@ -59,7 +59,7 @@ struct public_key_IDP* ask_pk_IDP(int sockfd, char* buf_recv, char* buf_send) {
     // 对于收到的数据，直接解析数据区即可
 
     num = recv(sockfd, buf_recv, MAX_LINE_BUFFER, 0);
-    printf("recv num is %d\n", num);
+    printf("[SUCCESS] recv num is %d\n", num);
 
     struct protocol_header* recv_header = (struct protocol_header*) buf_recv;
     char* recv_data = (char*)(buf_recv + HEADER_LEN);
@@ -70,7 +70,7 @@ struct public_key_IDP* ask_pk_IDP(int sockfd, char* buf_recv, char* buf_send) {
 
         // so why there is a problem?
         tmp_pk_IDP = pk_IDP_from_bytes(recv_data);
-        printf("get the pk IDP\n");
+        printf("[INFO] get the pk IDP\n");
     }
     // 直接返回生成的公钥即可
     return tmp_pk_IDP;
@@ -144,7 +144,7 @@ struct list* ask_user_info_infra(int sockfd, char* buf_recv, char* buf_send) {
     // 对于收到的数据，直接解析数据区即可
 
     num = recv(sockfd, buf_recv, MAX_LINE_BUFFER, 0);
-    printf("recv num is %d\n", num);
+    printf("[SUCCESS] recv num is %d\n", num);
 
     struct protocol_header* recv_header = (struct protocol_header*) buf_recv;
     char* recv_data = (char*)(buf_recv + HEADER_LEN);
@@ -155,7 +155,7 @@ struct list* ask_user_info_infra(int sockfd, char* buf_recv, char* buf_send) {
 
         // so why there is a problem?
         res_list = get_user_info_list(recv_data, recv_header->length);
-        printf("get the user info list\n");
+        printf("[INFO] get the user info list\n");
     }
     // 直接返回生成的公钥即可
     return res_list;
@@ -191,6 +191,27 @@ void fill_up_user_info(char* input_buffer, struct list* user_info_infra, int inp
         strcpy(tmp_str, input_buffer);
 
         tmp_node->val2 = tmp_str;
+
+        // 至此完成内容的输入
+        tmp_node = tmp_node->next;
+    }
+
+    return;
+}
+
+void fill_up_user_info_automatic(char* input_buffer, struct list* user_info_infra, int input_length_limit) {
+    struct list_node* tmp_node = user_info_infra->vir_head->next;
+    
+    // 当然也可以从键盘读入
+    // 也可以从配置文件读入
+    // 也可以输入空，如果默认为空，那么可以加入一些别的信息
+    while(tmp_node != user_info_infra->vir_tail) {
+        
+        char* tmp_str = "automatic input";
+
+        // 局部变量会自动跳出对应的范围
+        tmp_node->val2 = (char*)malloc(strlen(tmp_str) + 1);
+        strcpy(tmp_node->val2, tmp_str);
 
         // 至此完成内容的输入
         tmp_node = tmp_node->next;
@@ -273,14 +294,14 @@ int send_user_info_to_IDP(int sockfd, char* buf_recv, char* buf_send, struct lis
     // 对于收到的数据，直接解析数据区即可
 
     num = recv(sockfd, buf_recv, MAX_LINE_BUFFER, 0);
-    printf("recv num is %d\n", num);
+    printf("[SUCCESS] recv num is %d\n", num);
 
     struct protocol_header* recv_header = (struct protocol_header*) buf_recv;
     char* recv_data = (char*)(buf_recv + HEADER_LEN);
     recv_data[recv_header->length] = '\0';
 
     if(tmp_header->state == 3) {
-        printf("server reply:%s\n", recv_data);
+        printf("[INFO] server reply:%s\n", recv_data);
     }
 
     // 返回值为1，表示发送成功，并且接收到服务器的回复
@@ -312,7 +333,7 @@ struct sigma_c* ask_compute_sigma_c(int sockfd, char* buf_recv, char* buf_send, 
     // 对于收到的数据，直接解析数据区即可
 
     num = recv(sockfd, buf_recv, MAX_LINE_BUFFER, 0);
-    printf("recv num is %d\n", num);
+    printf("[SUCCESS] recv num is %d\n", num);
 
     // m_0 与 m_1的地位是完全不同的
     struct protocol_header* recv_header = (struct protocol_header*) buf_recv;
@@ -328,7 +349,7 @@ struct sigma_c* ask_compute_sigma_c(int sockfd, char* buf_recv, char* buf_send, 
 
         // 一个地方存公钥，一个地方存私钥，让人费解
         res_sigma_c = sigma_c_from_bytes(recv_data, recv_header->length, tmp_pk_IDP);
-        printf("successfully get the sigma_c!\n");
+        printf("[INFO] successfully get the sigma_c!\n");
     }
     // 直接返回计算的签名即可
     return res_sigma_c;
