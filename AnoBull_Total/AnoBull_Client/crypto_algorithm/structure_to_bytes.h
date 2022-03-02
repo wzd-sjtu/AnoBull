@@ -10,4 +10,9 @@ struct sigma_c* sigma_c_from_bytes(char* data_buffer, int length, struct public_
 
 // int sigma_to_bytes(struct sigma* will_send_sigma, char* data_buffer, int data_len_limit);
 int sigma_to_bytes(struct sigma* will_send_sigma, char* data_buffer, int data_len_limit, struct public_key_IDP* pk_IDP);
+struct sigma* sigma_from_bytes(char* data_buffer, int length, struct public_key_IDP* pk_IDP);
+
+int filling_selected_m_vector_into_buffer(char* data_buffer, element_t* m_vector, char* select_vector, \
+    struct public_key_IDP* pk_IDP);
+
 #endif

@@ -38,4 +38,11 @@ void fill_up_user_info_automatic(char* input_buffer, struct list* user_info_infr
 
 int send_user_info_to_IDP(int sockfd, char* buf_recv, char* buf_send, struct list* user_info_infra);
 struct sigma_c* ask_compute_sigma_c(int sockfd, char* buf_recv, char* buf_send, struct public_key_IDP* tmp_pk_IDP);
+
+int store_service_info(char* send_buf, struct sigma* signature, element_t* m_vector, char* select_vector, \
+    struct public_key_IDP* pk_IDP);
+
+// 无脑发送+接受即可
+int ask_service(int sockfd, char* buf_recv, char* buf_send, int send_len);
+
 #endif

@@ -11,7 +11,8 @@
 
 int sqlite_init(const char *db_path);
 int create_table_by_list(struct list* user_info_list);
-int create_table_sigma_c();
+// int create_table_sigma_c();
+int create_table_sigma_c(struct list* user_info_list);
 int insert_user_info_by_list(struct list* user_info_list);
 
 #endif

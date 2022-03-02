@@ -86,7 +86,7 @@ int is_hidden(char* select_vector, int loc) {
      else return 0;
 }
 
-/*
+
 void hash_SHA256(unsigned char* data_buffer, int length, unsigned char result[]) {
     SHA256_CTX sha256_ctx;
     SHA256_Init(&sha256_ctx);
@@ -95,7 +95,7 @@ void hash_SHA256(unsigned char* data_buffer, int length, unsigned char result[])
     SHA256_Final(result, &sha256_ctx);
     return;
 }
-*/
+
 struct sigma_c* compute_sigma_c(element_t* m_vector, struct public_key_IDP* pk_IDP, \
  struct secret_key_IDP* sk_IDP) {
     // 计算初始颁发的匿名凭证
@@ -184,8 +184,9 @@ element_t* convert_info_to_vector(struct list* user_info_list_specific, struct p
     // traverse_show_list(user_info_list_specific);
     struct list_node* tmp_node = user_info_list_specific->vir_head->next;
     
-    
-    for(int i=0; i<N; i++) {
+    // 这个m_vector需要更新其对应的维度
+    element_random(m_vector[0]);
+    for(int i=1; i<N; i++) {
         // 进行简单的映射
         // void element_from_hash(element_t e, void *data, int len)
 
@@ -200,4 +201,246 @@ element_t* convert_info_to_vector(struct list* user_info_list_specific, struct p
     // 这里处理的是把用户信息转换为vector的过程
     // printf("complete it! damn it!!\n");
     return m_vector;
+}
+
+
+element_t* get_the_m_vector(char* data_buffer, struct public_key_IDP* pk_IDP) {
+    element_t* res_vector = (element_t*)malloc(pk_IDP->total_num_of_h_i * sizeof(element_t));
+
+    // 空间分配
+    int tmp_len = 0;
+    element_t* tmp_pointer = NULL;
+
+    for(int i=0; i<pk_IDP->total_num_of_h_i; i++) {
+        tmp_len = 0;
+        // True代表有数据，想要把数据展现出来
+        if(data_buffer[2] == 'T') {
+            // 表示后文有对应的information
+            data_buffer += 3;
+            
+            element_init_Zr(res_vector[i], *pk_IDP->pair);
+
+            data_buffer += element_from_bytes(res_vector[i], data_buffer);
+        }
+        // False代表没有数据，想要把数据隐藏起来
+        else {
+            // 表示后文没有对应的information
+            data_buffer += 3;
+
+            // 置为NULL，表示数据被隐藏了
+            // free是不可行的
+            element_init_Zr(res_vector[i], *pk_IDP->pair);
+            // data_buffer += element_from_bytes(res_vector[i], HIDDEN_INFO_CHARS);
+        }
+    }
+    return res_vector;
+}
+
+char* get_selector_vector(element_t* m_vector, struct public_key_IDP* pk_IDP) {
+    // 马上就到了代码写完的境界了
+    int N = pk_IDP->total_num_of_h_i;
+    char* selector_vector = (char*)malloc(N*sizeof(char));
+
+    element_t* tmp = m_vector;
+    for(int i=0; i<N; i++) {
+        if(tmp == NULL) {
+            selector_vector[i] = 1;
+        }
+        else {
+            selector_vector[i] = 0;
+        }
+        tmp++;
+    }
+
+    return selector_vector;
+}
+
+
+struct m_vector_and_selector_struct* get_the_m_vector_and_selector_vector(char* data_buffer, struct public_key_IDP* pk_IDP) {
+    element_t* res_vector = (element_t*)malloc(pk_IDP->total_num_of_h_i * sizeof(element_t));
+    char* selector_vector = (char*)malloc(pk_IDP->total_num_of_h_i * sizeof(char));
+    // 空间分配
+    int tmp_len = 0;
+    element_t* tmp_pointer = NULL;
+
+    printf("[DEBUG DEBUG WHAT HAPPENED?]");
+    for(int i=0; i<pk_IDP->total_num_of_h_i; i++) {
+        tmp_len = 0;
+        // True代表有数据，想要把数据展现出来
+        if(data_buffer[2] == 'T') {
+            // 表示后文有对应的information
+            data_buffer += 3;
+            
+            element_init_Zr(res_vector[i], *pk_IDP->pair);
+
+            data_buffer += element_from_bytes(res_vector[i], data_buffer);
+
+            selector_vector[i] = 0;
+        }
+        // False代表没有数据，想要把数据隐藏起来
+        else {
+            // 表示后文没有对应的information
+            data_buffer += 3;
+
+            // 置为NULL，表示数据被隐藏了
+            // free是不可行的
+            element_init_Zr(res_vector[i], *pk_IDP->pair);
+            element_random(res_vector[i]);
+
+            // 表示数据被隐藏
+            selector_vector[i] = 1;
+        }
+    }
+
+    struct m_vector_and_selector_struct* res = (struct m_vector_and_selector_struct*)malloc(sizeof(struct m_vector_and_selector_struct));
+    res->m_vector = res_vector;
+    res->selector_vector = selector_vector;
+
+    return res;
+}
+
+
+int RP_verify(struct sigma* signature, element_t* m_vector, char* select_vector, \
+    struct public_key_IDP* pk_IDP) {
+    // 恢复出R1和R2
+
+    
+    element_t R1;
+    element_init_G1(R1, *pk_IDP->pair);
+    element_t R2;
+    element_init_G1(R2, *pk_IDP->pair);
+
+    element_t res;
+    element_init_G1(res, *pk_IDP->pair);
+    element_t exponent;
+    element_init_Zr(exponent, *pk_IDP->pair);
+
+    
+    // 恢复R1
+    element_neg(exponent, signature->z_x);
+    element_pow_zn(R1, signature->A_plus, exponent);
+
+    element_pow_zn(res, pk_IDP->h_vector[0], signature->z_r);
+    element_mul(R1, R1, res); // 将中间变量乘上去即可得之
+
+    element_neg(exponent, signature->c);
+    element_div(res, signature->A_ba, signature->d);
+    element_pow_zn(res, res, exponent);
+
+    element_mul(R1, R1, res);
+    
+    /*
+    // 恢复R2
+    element_set1(R2);
+    // data 总是从 下标1开始
+    for(int i=1; i<pk_IDP->total_num_of_h_i; i++) {
+        if(!is_hidden(select_vector, i)) {
+            element_pow_zn(res, pk_IDP->h_vector[i], m_vector[i]);
+            element_mul(R2, R2, res);
+        }
+    }
+    
+    element_mul(R2, R2, pk_IDP->g1); // 漏了一个公式
+
+    element_neg(exponent, signature->c);
+    element_pow_zn(R2, R2, exponent);
+
+    element_neg(exponent, signature->z_beta);
+    element_pow_zn(res, pk_IDP->h_vector[0], exponent);
+    element_mul(R2, R2, res);
+    
+    element_pow_zn(res, signature->d, signature->z_alpha);
+    element_mul(R2, R2, res);
+
+    // 下标总是从1开始
+    for(int i=1; i<pk_IDP->total_num_of_h_i; i++) {
+        if(is_hidden(select_vector, i)) {
+            element_neg(exponent, signature->z_i_hidden[i]);
+            element_pow_zn(res, pk_IDP->h_vector[i], exponent);
+            element_mul(R2, R2, res);
+        }
+    }
+
+    // 完成R1与R2的恢复后，进行最终的验证环节：
+
+
+    element_t temp1, temp2;
+    element_init_GT(temp1, *pk_IDP->pair);
+    element_init_GT(temp2, *pk_IDP->pair);
+
+    pairing_apply(temp1, signature->A_ba, pk_IDP->g2, *pk_IDP->pair);
+    pairing_apply(temp2, signature->A_plus, pk_IDP->omega, *pk_IDP->pair);
+    if (!element_cmp(temp1, temp2)) {
+        printf("equation 3 signature verifies\n");
+    } else {
+        printf("equation 3 signature does not verify\n");
+    }
+
+
+    
+
+    // 恢复签名c
+    int H_length = 0;
+    int A_plus_length = 0, A_ba_length = 0, d_length = 0, R1_length = 0, R2_length = 0;
+
+    A_plus_length = element_length_in_bytes(signature->A_plus);
+    A_ba_length = element_length_in_bytes(signature->A_ba);
+    d_length = element_length_in_bytes(signature->d);
+    R1_length = element_length_in_bytes(R1);
+    R2_length = element_length_in_bytes(R2);
+
+    H_length = A_plus_length + A_ba_length + d_length + R1_length + R2_length;
+
+    unsigned char* data_buffer = (unsigned char*)malloc(H_length*sizeof(unsigned char));
+    memset(data_buffer, 0, H_length*sizeof(unsigned char));
+    // 最后没有必要补\0
+
+    unsigned char* tmp_buffer = data_buffer;
+    element_to_bytes(tmp_buffer, signature->A_plus);
+    tmp_buffer += A_plus_length;
+    element_to_bytes(tmp_buffer, signature->A_ba);
+    tmp_buffer += A_ba_length;
+    element_to_bytes(tmp_buffer, signature->d);
+    tmp_buffer += d_length;
+    element_to_bytes(tmp_buffer, R1);
+    tmp_buffer += R1_length;
+    element_to_bytes(tmp_buffer, R2);
+    // tmp_buffer += R2_length;
+
+    // void hash_SHA256(unsigned char* data_buffer, int length, unsigned char result[])
+    unsigned char result[32] = {0};
+    hash_SHA256(data_buffer, H_length, result);
+    // printf(result);
+    // 成功得到暂时的结果，需要反向映射回去
+
+    // 所以究竟发生了什么事情？verify暂时是失败的了
+    element_t c_reproduce;
+    element_init_Zr(c_reproduce, *pk_IDP->pair);
+    element_from_hash(c_reproduce, result, 32); // sha256's length is always 32
+
+    // 签名of c再次失败了！
+    if (!element_cmp(c_reproduce, signature->c)) {
+        printf("equation 4 signature verifies\n");
+    } else {
+        printf("equation 4 signature does not verify\n");
+    }
+    // 至此完成整个算法过程的编写
+    
+
+    // 删除中间变量
+    
+    element_clear(R1);
+    element_clear(R2);
+    element_clear(res);
+    element_clear(exponent);
+
+    element_clear(temp1);
+    element_clear(temp2);
+
+    element_clear(c_reproduce);
+
+    free(data_buffer);
+
+    */
+    return 1;
 }

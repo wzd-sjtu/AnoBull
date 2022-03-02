@@ -220,34 +220,69 @@ struct sigma* sigma_from_bytes(char* data_buffer, int length, struct public_key_
     char* tmp_buffer = data_buffer;
     int tmp_len = 0;
 
-    tmp_len = element_from_bytes(res_sigma_c->A_plus, tmp_buffer);
+    tmp_len = element_from_bytes(res_sigma->A_plus, tmp_buffer);
     tmp_buffer += tmp_len;
 
-    tmp_len = element_from_bytes(res_sigma_c->A_ba, tmp_buffer);
+    tmp_len = element_from_bytes(res_sigma->A_ba, tmp_buffer);
     tmp_buffer += tmp_len;
 
-    tmp_len = element_from_bytes(res_sigma_c->d, tmp_buffer);
+    tmp_len = element_from_bytes(res_sigma->d, tmp_buffer);
     tmp_buffer += tmp_len;
 
-    tmp_len = element_from_bytes(res_sigma_c->c, tmp_buffer);
+    tmp_len = element_from_bytes(res_sigma->c, tmp_buffer);
     tmp_buffer += tmp_len;
 
-    tmp_len = element_from_bytes(res_sigma_c->z_x, tmp_buffer);
+    tmp_len = element_from_bytes(res_sigma->z_x, tmp_buffer);
     tmp_buffer += tmp_len;
 
-    tmp_len = element_from_bytes(res_sigma_c->z_r, tmp_buffer);
+    tmp_len = element_from_bytes(res_sigma->z_r, tmp_buffer);
     tmp_buffer += tmp_len;
 
-    tmp_len = element_from_bytes(res_sigma_c->z_alpha, tmp_buffer);
+    tmp_len = element_from_bytes(res_sigma->z_alpha, tmp_buffer);
     tmp_buffer += tmp_len;
 
-    tmp_len = element_from_bytes(res_sigma_c->z_beta, tmp_buffer);
+    tmp_len = element_from_bytes(res_sigma->z_beta, tmp_buffer);
     tmp_buffer += tmp_len;
 
     for(int i=0; i<N; i++) {
-        tmp_len = element_from_bytes(res_sigma_c->z_i_hidden[i], tmp_buffer);
+        tmp_len = element_from_bytes(res_sigma->z_i_hidden[i], tmp_buffer);
         tmp_buffer += tmp_len;
     }
 
     return res_sigma;
+}
+
+int filling_selected_m_vector_into_buffer(char* data_buffer, element_t* m_vector, char* select_vector, \
+    struct public_key_IDP* pk_IDP) {
+    
+    // 将选择矩阵存入到vector里面
+    // num:T 表示后文被选择
+    // num:F 表示后文没有被选择
+    int N = pk_IDP->total_num_of_h_i;
+    char* tmp_buffer = data_buffer;
+    int tmp_store_len = 0;
+    int total_len = 0;
+
+    for(int i=0; i<N; i++) {
+        tmp_store_len = 0;
+        if(is_hidden(select_vector, i)) {
+            // 如果目标被隐藏
+            tmp_buffer[0] = (char)(i + '0');
+            tmp_buffer[1] = ':';
+            tmp_buffer[2] = 'F';
+            tmp_buffer += 3;
+        }
+        else {
+            tmp_buffer[0] = (char)(i + '0');
+            tmp_buffer[1] = ':';
+            tmp_buffer[2] = 'T';
+            tmp_buffer += 3;
+
+            tmp_store_len = element_to_bytes(tmp_buffer, m_vector[i]);
+            tmp_buffer += tmp_store_len;
+        }
+        total_len += 3;
+        total_len += tmp_store_len;
+    }
+    return total_len;
 }

@@ -120,13 +120,13 @@ int create_table_by_list(struct list* user_info_list) {
 
 	if(ret != SQLITE_OK) {
 		printf("[ERROR] SQL error:%s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
 	}
 	else {
 		printf("[INFO] create table successfully!\n");
 	}
 	
 
+	sqlite3_free(zErrMsg);
 	sqlite3_close(db);
 
 	return ret;
@@ -213,7 +213,6 @@ int insert_user_info_by_list(struct list* user_info_list) {
 
 	if(ret != SQLITE_OK) {
 		printf("[ERROR] SQL error:%s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
 	}
 	else {
 		printf("[INFO] insert or update user info successfully!\n");
@@ -221,11 +220,58 @@ int insert_user_info_by_list(struct list* user_info_list) {
 	}
 	
 	// 处理完记得close数据库
+	sqlite3_free(zErrMsg);
 	sqlite3_close(db);
 	return ret;
 }
 
-
-int create_table_sigma_c() {
+// 表格的名字需要修改
+int create_table_sigma_c(struct list* user_info_list) {
 	// 直接create对应的information即可得之
+	// 根据user_info_list设置表
+    sqlite3 *db;
+	char* zErrMsg = NULL;
+	int ret = 0;
+
+	ret = sqlite3_open(DB_PATH, &db);
+	if(ret != SQLITE_OK) {
+		printf("[ERROR] Can't open database: %s\n", sqlite3_errmsg(db));
+		return 0;
+	}
+	else {
+		printf("[INFO] Open database successfully\n");
+	}
+
+	// 需要执行的sql语句，这股语句存在溢出的可能性possibility
+	char sql_buffer[SQL_MAX_LINE] = {0};
+	char buffer[10] = {0};
+	char* tmp = sql_buffer;
+	// 将buffer内容向目标tmp写入，从而完成基本的内容书写
+
+	
+	tmp = connect_sql_string(tmp, "create table if not exists user_sigma_c_");
+
+	// printf("number is %d\n", user_info_list->list_num);
+	buffer[0] = (char)(user_info_list->list_num + '0');
+	buffer[1] = '\0';
+	// printf("char string is buffer %s\n", buffer);
+	tmp = connect_sql_string(tmp, buffer);
+
+	tmp = connect_sql_string(tmp, " (name text primary key not null, sigma_c text not null);");
+
+	ret = sqlite3_exec(db, sql_buffer, NULL, NULL, &zErrMsg);
+	// printf("sql is %s\n", sql_buffer);
+
+	if(ret != SQLITE_OK) {
+		printf("[ERROR] SQL error:%s\n", zErrMsg);
+	}
+	else {
+		printf("[INFO] create table successfully!\n");
+	}
+	
+
+	sqlite3_free(zErrMsg);
+	sqlite3_close(db);
+
+	return ret;
 }

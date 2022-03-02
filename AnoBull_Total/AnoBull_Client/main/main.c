@@ -65,7 +65,6 @@ int main() {
     // 状态四：请求计算签名 sigma_c
     struct sigma_c* res_sigma_c = ask_compute_sigma_c(sockfd, buf_recv, buf_send, tmp_pk_IDP);
     
-    close(sockfd);
 
     // printf("user info length is %d\n", user_info_infra->list_num);
     // printf("pk_IDP's length is %d\n", tmp_pk_IDP->total_num_of_h_i);
@@ -75,6 +74,9 @@ int main() {
     // selector_vector的维度是从0-(N)，一共有N+1的维度
     // 这个设计让人很难受
     char* selector_vector = (char*)malloc(tmp_pk_IDP->total_num_of_h_i);
+
+    // 在测试时，一定要记得，把selector_vector[0]标记为1，表示想要隐藏它
+    selector_vector[0] = 1;
     selector_vector[2] = 1;
     selector_vector[3] = 1;
 
@@ -102,11 +104,18 @@ int main() {
     // 实际上最好把这个信息传送过去，从而降低整个程序运行的开销
 
     // m_vector是否要发送过去？将m_vector存储为对应的链表即可，对的了
+    // 居然directly裂开了，这里有非常深层次的bug，gg
     RP_verify(res_sigma, m_vector, selector_vector, tmp_pk_IDP);
 
 
-    int final_ret = ask_related_service(buf_send, res_sigma, m_vector, selector_vector, tmp_pk_IDP);
+    int store_length = store_service_info(buf_send, res_sigma, m_vector, selector_vector, tmp_pk_IDP);
 
+    // 正式开始请求服务
+    // 居然发送失败？
+    ask_service(sockfd, buf_recv, buf_send, store_length);
+
+
+    close(sockfd);
 
     while(1) {
 

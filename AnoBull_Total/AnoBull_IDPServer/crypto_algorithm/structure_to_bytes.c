@@ -311,6 +311,8 @@ int sigma_c_to_bytes(struct sigma_c* will_send_sigma_c, char* data_buffer, int d
 }
 
 
+
+// 这里还需要别的api来做相关的处理的哦。
 struct sigma_c* sigma_c_from_bytes(char* data_buffer, int length, struct public_key_IDP* pk_IDP) {
     // 下面对thing做一个恢复
     // 这个api对于user端来说，也是成立的
@@ -343,5 +345,121 @@ struct sigma_c* sigma_c_from_bytes(char* data_buffer, int length, struct public_
     return res_sigma_c;
 }
 
+// to and from are both needed.
+int sigma_to_bytes(struct sigma* will_send_sigma, char* data_buffer, int data_len_limit, struct public_key_IDP* pk_IDP) {
+    // another convert function
+    // which is always complex for me to build it.
+    int tmp_store_len = 0;
+    int total_len = 0;
 
-// 这里还需要别的api来做相关的处理的哦。
+    char* tmp_buffer = data_buffer;
+    tmp_store_len = element_to_bytes(data_buffer, will_send_sigma->A_plus);
+    total_len += tmp_store_len;
+    
+    data_buffer += tmp_store_len;
+    tmp_store_len = element_to_bytes(data_buffer, will_send_sigma->A_ba);
+    total_len += tmp_store_len;
+
+    data_buffer += tmp_store_len;
+    tmp_store_len = element_to_bytes(data_buffer, will_send_sigma->d);
+    total_len += tmp_store_len;
+
+    data_buffer += tmp_store_len;
+    tmp_store_len = element_to_bytes(data_buffer, will_send_sigma->c);
+    total_len += tmp_store_len;
+
+    data_buffer += tmp_store_len;
+    tmp_store_len = element_to_bytes(data_buffer, will_send_sigma->z_x);
+    total_len += tmp_store_len;
+
+    data_buffer += tmp_store_len;
+    tmp_store_len = element_to_bytes(data_buffer, will_send_sigma->z_r);
+    total_len += tmp_store_len;
+
+    data_buffer += tmp_store_len;
+    tmp_store_len = element_to_bytes(data_buffer, will_send_sigma->z_alpha);
+    total_len += tmp_store_len;
+
+    data_buffer += tmp_store_len;
+    tmp_store_len = element_to_bytes(data_buffer, will_send_sigma->z_beta);
+    total_len += tmp_store_len;
+
+    int N = pk_IDP->total_num_of_h_i;
+    for(int i=0; i<N; i++) {
+        data_buffer += tmp_store_len;
+        tmp_store_len = element_to_bytes(data_buffer, will_send_sigma->z_i_hidden[i]);
+        total_len += tmp_store_len;
+    }
+
+    // 最终完成整个数据结构的存储
+    return total_len;
+}
+
+
+struct sigma* sigma_from_bytes(char* data_buffer, int length, struct public_key_IDP* pk_IDP, char** m_vector_point) {
+    // another convert function
+    // which is always complex for me to build it.
+
+    // 进行了无脑的数组串的转化与生成
+    // 现在就是玄学，真实吐了
+    struct sigma* res_sigma = (struct sigma*)malloc(sizeof(struct sigma));
+
+    
+    
+    element_init_G1(res_sigma->A_plus, *pk_IDP->pair);
+    element_init_G1(res_sigma->A_ba, *pk_IDP->pair);
+    element_init_G1(res_sigma->d, *pk_IDP->pair);
+    element_init_G1(res_sigma->c, *pk_IDP->pair);
+
+    element_init_Zr(res_sigma->z_x, *pk_IDP->pair);
+    element_init_Zr(res_sigma->z_r, *pk_IDP->pair);
+    element_init_Zr(res_sigma->z_alpha, *pk_IDP->pair);
+    element_init_Zr(res_sigma->z_beta, *pk_IDP->pair);
+
+    int N = pk_IDP->total_num_of_h_i;
+
+    res_sigma->z_i_hidden = (element_t*)malloc(N*sizeof(element_t));
+    for(int i=0; i<N; i++) {
+        element_init_Zr(res_sigma->z_i_hidden[i], *pk_IDP->pair);
+    }
+
+    char* tmp_buffer = data_buffer;
+    int tmp_len = 0;
+
+    
+    tmp_len = element_from_bytes(res_sigma->A_plus, tmp_buffer);
+    tmp_buffer += tmp_len;
+
+    tmp_len = element_from_bytes(res_sigma->A_ba, tmp_buffer);
+    tmp_buffer += tmp_len;
+
+    tmp_len = element_from_bytes(res_sigma->d, tmp_buffer);
+    tmp_buffer += tmp_len;
+
+    tmp_len = element_from_bytes(res_sigma->c, tmp_buffer);
+    tmp_buffer += tmp_len;
+
+    tmp_len = element_from_bytes(res_sigma->z_x, tmp_buffer);
+    tmp_buffer += tmp_len;
+
+    tmp_len = element_from_bytes(res_sigma->z_r, tmp_buffer);
+    tmp_buffer += tmp_len;
+
+    tmp_len = element_from_bytes(res_sigma->z_alpha, tmp_buffer);
+    tmp_buffer += tmp_len;
+
+    tmp_len = element_from_bytes(res_sigma->z_beta, tmp_buffer);
+    tmp_buffer += tmp_len;
+
+    
+    for(int i=0; i<N; i++) {
+        tmp_len = element_from_bytes(res_sigma->z_i_hidden[i], tmp_buffer);
+        tmp_buffer += tmp_len;
+    }
+    
+    // 希望二级指针原地改变
+    // 成功get到了sigma，为后文的处理打下基础
+    *m_vector_point = tmp_buffer;
+
+    return res_sigma;
+}

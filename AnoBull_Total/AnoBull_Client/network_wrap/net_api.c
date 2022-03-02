@@ -355,37 +355,41 @@ struct sigma_c* ask_compute_sigma_c(int sockfd, char* buf_recv, char* buf_send, 
     return res_sigma_c;
 }
 
-// 这里写的logic感觉好混乱。。
-int ask_related_service(struct sigma* signature, element_t* m_vector, char* select_vector, \
+// 将用户自定义签名+选择信息序列存入缓冲区
+// 并且状态为5
+int store_service_info(char* buf_send, struct sigma* signature, element_t* m_vector, char* select_vector, \
     struct public_key_IDP* pk_IDP) {
-
-    // 下面计算对应的information即可得之
-    // 这里涉及很多API函数
-    // 关于这个info对或者不对，这并不重要
-    // struct list* send_user_info_list = convert_selector_vector_to_list(m_vector, selector_vector, pk_IDP);
-    // 不妨把info直接填入缓冲区
-    // int N = pk_IDP->total_num_of_h_i;
-    
 
     // 首先目标是send再recv，这个顺序要考虑consider清楚
     struct protocol_header* tmp_header = (struct protocol_header*) buf_send;
     memset(tmp_header, 0, sizeof(struct protocol_header));
-    // 请求公钥
+    // 请求服务，也就是状态5
     tmp_header->sig_pro = 5;
     tmp_header->state = 5;
     
+    // HEADER_LEN是规定死的协议protocol
     char* data_point = (char*)(buf_send + HEADER_LEN);
     
     // 向data_point存入必要的信息即可
-    int add_len = sigma_to_bytes(signature, buf_send, int data_len_limit, struct public_key_IDP* pk_IDP);
+
+    // int sigma_to_bytes(struct sigma* will_send_sigma, char* data_buffer, int data_len_limit, struct public_key_IDP* pk_IDP);
+    // 存入sigma
+    int add_len = sigma_to_bytes(signature, data_point, DATA_LEN, pk_IDP);
+    // printf("[DEBUG DEBUG] convert the sigma to bytes!\n");
+    // 存入selector_vector
     add_len += filling_selected_m_vector_into_buffer(data_point + add_len, m_vector, select_vector, pk_IDP);
 
-    // no need to add '\0'
-    // data_point[add_len] = '\0';
+    tmp_header->length = add_len;
 
-    tmp_header->length = add_len; // 存入对应的信息即可得部分结果
+    //
+    return add_len + HEADER_LEN;
+}
 
-    int num = send(sockfd, buf_send, HEADER_LEN + tmp_header->length, 0);
+// int RP_verify(struct sigma* signature, element_t* m_vector, char* select_vector, \
+    struct public_key_IDP* pk_IDP);
+
+int ask_service(int sockfd, char* buf_recv, char* buf_send, int send_len) {
+    int num = send(sockfd, buf_send, send_len, 0);
 
     if(num == -1) {
         printf("send failed!\n");
@@ -393,26 +397,15 @@ int ask_related_service(struct sigma* signature, element_t* m_vector, char* sele
     }
 
     // 对于收到的数据，直接解析数据区即可
-    // 将填好的数据存进去
 
     num = recv(sockfd, buf_recv, MAX_LINE_BUFFER, 0);
     printf("[SUCCESS] recv num is %d\n", num);
+    printf("[SUCCESS] recv info is %s\n", buf_recv + HEADER_LEN);
 
+    // m_0 与 m_1的地位是完全不同的
     struct protocol_header* recv_header = (struct protocol_header*) buf_recv;
     char* recv_data = (char*)(buf_recv + HEADER_LEN);
 
-    // uint16_t_p data_region_len = tmp_header->length;
-    struct public_key_IDP* tmp_pk_IDP = NULL;
-    if(recv_header->state == 1) {
-
-        // so why there is a problem?
-        tmp_pk_IDP = pk_IDP_from_bytes(recv_data);
-        printf("[INFO] get the pk IDP\n");
-    }
-    // 直接返回生成的公钥即可
-    return tmp_pk_IDP;
+    // 收到对应的消息即可了
+    return num;
 }
-
-// int RP_verify(struct sigma* signature, element_t* m_vector, char* select_vector, \
-    struct public_key_IDP* pk_IDP);
-

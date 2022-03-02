@@ -10,5 +10,7 @@
 
 #include "sigma_c_def.h"
 // 这里进行了复杂的头文件包含
+#include "sigma_def.h"
+#include "extra_struct_def.h"
 
 #endif

@@ -74,6 +74,8 @@ int main() {
     printf("[INFO] sqlite init successfully!\n");
     sql_ret = create_table_by_list(test_config_specific->user_info_list);
     
+    sql_ret = create_table_sigma_c(test_config_specific->user_info_list);
+
     // 处理完数据库之后，记得关闭它
     // sqlite3_close(db);
 
@@ -95,7 +97,10 @@ int main() {
 
     // 这里的维度需要重点考虑，之前写成一样的，其实是在偷懒。。
     // pk_IDP = init_IDP_public_key(pair_choice, info_dimention + 1, sk_IDP);
-    pk_IDP = init_IDP_public_key(pair_choice, info_dimention, sk_IDP);
+
+    // 数据维度总是需要加一的，否则不合适了
+    // seems user 数据维度挺麻烦的
+    pk_IDP = init_IDP_public_key(pair_choice, info_dimention + 1, sk_IDP);
     
 
 

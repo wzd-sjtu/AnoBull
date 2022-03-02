@@ -47,7 +47,6 @@ int tcp_listen(int port)
 }
 
 
-
 void Thread_function(void* arg) {
 
     // 经过一系列处理，得到用户的客户端程序，之后需要进行别的操作behavour
@@ -82,6 +81,10 @@ void Thread_function(void* arg) {
     // 3表示用户的信息序列串
     // 4表示需要计算 签名，获取对应的签名
     // 4必须在3后面，这个是状态机的自动转换过程
+
+    // 5表示客户请求服务，发送来用户信息序列（如果不想暴露，只放出最基本的，别的使用' '一个空格表示无效，selector_vector需要在服务器端自己构建）
+    // 收到  （1）用户自动生成的sigma_j （2）用户发来的信息串  主键是用户的sigma_j，并且设置发送过来的次数，这个次数是需要不断更新的
+    // 暂时就使用这种逻辑来统计工作量算了，需要补一个int类型
 
     int length = 0;
 
@@ -215,10 +218,12 @@ void store_sigma_c(char* sigma_c_buffer, int length, struct list* user_info_list
         }
         tmp_list_node = tmp_list_node->next;
     }
+    // 每次store都需要存储最基本的数据库知识啦！
+    // 这个数据库打开关闭的开销是否需要考虑呢？不明白
     // store_sigma_c(will_send_sigma_c, user_info_list_specific);
 
     // 需要构建一个表，外加一个对应的sigma_c
-    
+
     return;
 }
 struct list* recv_user_info_list(char* recv_data, struct protocol_header* recv_header) {
@@ -281,6 +286,7 @@ int store_user_info(struct list* user_info_list) {
     // 现在就暂时把此处的代码给空置
     // int insert_user_info_by_list(struct list* user_info_list)
 
+    // 这个函数是dao数据持久化层中使用的，位置有点乱啦
     insert_user_info_by_list(user_info_list);
 
     return 0;
@@ -425,7 +431,8 @@ int process_recv(char* thread_recv_buffer, char* thread_send_buffer, int recv_le
             // traverse_show_list(pub_list);
 
             struct list* user_info_list_specific = *(struct list**)para_transmit;
-
+            // printf("[DEBUG DEBUG] user info dimention is %d\n", user_info_list_specific->list_num);
+            // 将用户信息存储进入对应的表格之中即可
             element_t* m_vector = convert_info_to_vector(user_info_list_specific, pk_IDP);
             
             // pub_list
@@ -439,7 +446,7 @@ int process_recv(char* thread_recv_buffer, char* thread_send_buffer, int recv_le
             // 进行持久化存储
             // 存储这个sigma_c的意义是什么
             // here的userinfo还是总是需要的
-            store_sigma_c(will_send_sigma_c, user_info_list_specific);
+            store_sigma_c(send_buffer, put_len, user_info_list_specific);
 
             // printf("put_len:%d\n", put_len);
             // 下面这个新功能需要先测试再进行添加处理了！
@@ -450,6 +457,47 @@ int process_recv(char* thread_recv_buffer, char* thread_send_buffer, int recv_le
             
             // 这里又是新的api，信息存储api又来了
             return send_header->length + HEADER_LEN;
+        }
+        case 5: {
+            // 这个case 5没有进行合理处理
+
+            // recv_header recv_buffer
+            // length is tmply unknown
+            // pk_IDP is a global variable.
+            // 这个length是暂时未知的。。
+
+            // 初始定义二重指针时，指向NULL
+            // 自己指向NULL？明显不对了
+            char* no_use = "no";
+            char** m_vector_point = &no_use;
+            
+            // 计算sigma时就已经出现问题了，貌似并非free的问题
+            printf("[DEBUG DEBUG] begin get the sigma\n");
+            struct sigma* recvived_signature = sigma_from_bytes(recv_buffer, 0, pk_IDP, m_vector_point);
+            printf("[DEBUG DEBUG] end get the sigma\n");
+
+            // 真的让人头疼。。
+            // m_vector_point 已经被自动重定向了
+            // 成功搞到了m_vector
+            
+            // element_t* m_vector = get_the_m_vector(*m_vector_point, pk_IDP);
+            // char* selector_vector = get_selector_vector(m_vector, pk_IDP);
+            struct m_vector_and_selector_struct* added_struct = get_the_m_vector_and_selector_vector(*m_vector_point, pk_IDP);
+            strcpy(send_buffer, "[INFO] Server has receive your basic signature and m_vector!");
+            // 至此完成结果获取
+
+            element_t* m_vector = added_struct->m_vector;
+            char* selector_vector = added_struct->selector_vector;
+
+            // 下面正式进行验证
+            RP_verify(recvived_signature, m_vector, selector_vector, pk_IDP);
+            
+            send_header->state = 5;
+            send_header->length = strlen(send_buffer) + 1;
+
+
+            return send_header->length + HEADER_LEN;
+
         }
         default: {
             // 输入不合理，表示失败了
