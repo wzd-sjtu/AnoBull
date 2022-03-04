@@ -11,6 +11,8 @@ struct sigma {
     element_t d;
 
     // R1 and R2 also in G1
+
+    // Z_p
     element_t c;
     
     // Z_p

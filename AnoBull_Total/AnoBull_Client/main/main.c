@@ -74,7 +74,10 @@ int main() {
     // selector_vector的维度是从0-(N)，一共有N+1的维度
     // 这个设计让人很难受
     char* selector_vector = (char*)malloc(tmp_pk_IDP->total_num_of_h_i);
-
+    for(int i=0; i<tmp_pk_IDP->total_num_of_h_i;i++) {
+        selector_vector[i] = 0;
+    }
+    // 这里的logic很奇怪。。
     // 在测试时，一定要记得，把selector_vector[0]标记为1，表示想要隐藏它
     selector_vector[0] = 1;
     selector_vector[2] = 1;

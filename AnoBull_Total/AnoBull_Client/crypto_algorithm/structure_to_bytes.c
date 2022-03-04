@@ -204,7 +204,7 @@ struct sigma* sigma_from_bytes(char* data_buffer, int length, struct public_key_
     element_init_G1(res_sigma->A_plus, *pk_IDP->pair);
     element_init_G1(res_sigma->A_ba, *pk_IDP->pair);
     element_init_G1(res_sigma->d, *pk_IDP->pair);
-    element_init_G1(res_sigma->c, *pk_IDP->pair);
+    element_init_Zr(res_sigma->c, *pk_IDP->pair);
 
     element_init_Zr(res_sigma->z_x, *pk_IDP->pair);
     element_init_Zr(res_sigma->z_r, *pk_IDP->pair);
@@ -213,6 +213,8 @@ struct sigma* sigma_from_bytes(char* data_buffer, int length, struct public_key_
 
     int N = pk_IDP->total_num_of_h_i;
 
+    res_sigma->z_i_hidden = (element_t*)malloc(N*sizeof(element_t));
+    
     for(int i=0; i<N; i++) {
         element_init_Zr(res_sigma->z_i_hidden[i], *pk_IDP->pair);
     }
@@ -278,11 +280,44 @@ int filling_selected_m_vector_into_buffer(char* data_buffer, element_t* m_vector
             tmp_buffer[2] = 'T';
             tmp_buffer += 3;
 
+            // 自动将信息存入了
             tmp_store_len = element_to_bytes(tmp_buffer, m_vector[i]);
             tmp_buffer += tmp_store_len;
         }
         total_len += 3;
         total_len += tmp_store_len;
     }
+    // printf(data_buffer);
     return total_len;
+}
+
+
+int compare_sigma(struct sigma* var1, struct sigma* var2) {
+    if(element_cmp(var1->A_plus, var2->A_plus) != 0) {
+        printf("[ERROR] A_plus wrong!\n");
+        return -1;
+    }
+    else if(element_cmp(var1->A_ba, var2->A_ba) != 0) {
+        printf("[ERROR] A_ba wrong!\n");
+    }
+    else if(element_cmp(var1->d, var2->d) != 0) {
+        printf("[ERROR] d wrong!\n");
+    }
+    else if(element_cmp(var1->c, var2->c) != 0) {
+        printf("[ERROR] c wrong!\n");
+    }
+    else if(element_cmp(var1->z_x, var2->z_x) != 0) {
+        printf("[ERROR] z_x wrong!\n");
+    }
+    else if(element_cmp(var1->z_r, var2->z_r) != 0) {
+        printf("[ERROR] z_r wrong!\n");
+    }
+    else if(element_cmp(var1->z_alpha, var2->z_alpha) != 0) {
+        printf("[ERROR] z_alpha wrong!\n");
+    }
+    else if(element_cmp(var1->z_beta, var2->z_beta) != 0) {
+        printf("[ERROR] z_beta wrong!\n");
+    }
+
+    return 1;
 }

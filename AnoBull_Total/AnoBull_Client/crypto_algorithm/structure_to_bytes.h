@@ -14,5 +14,5 @@ struct sigma* sigma_from_bytes(char* data_buffer, int length, struct public_key_
 
 int filling_selected_m_vector_into_buffer(char* data_buffer, element_t* m_vector, char* select_vector, \
     struct public_key_IDP* pk_IDP);
-
+int compare_sigma(struct sigma* var1, struct sigma* var2);
 #endif

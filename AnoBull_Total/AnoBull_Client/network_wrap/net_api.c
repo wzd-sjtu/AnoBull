@@ -374,14 +374,25 @@ int store_service_info(char* buf_send, struct sigma* signature, element_t* m_vec
 
     // int sigma_to_bytes(struct sigma* will_send_sigma, char* data_buffer, int data_len_limit, struct public_key_IDP* pk_IDP);
     // 存入sigma
+
+    // 显然的是，这里的begin和end是存在问题的
+    // printf("begin sigma to bytes!\n");
     int add_len = sigma_to_bytes(signature, data_point, DATA_LEN, pk_IDP);
+    // printf("begin bytes to sigma!\n");
+    // struct sigma* verify_sigma = sigma_from_bytes(data_point, 0, pk_IDP);
+    // printf("end all verify module!\n");
+    // compare_sigma(signature, verify_sigma);
     // printf("[DEBUG DEBUG] convert the sigma to bytes!\n");
     // 存入selector_vector
-    add_len += filling_selected_m_vector_into_buffer(data_point + add_len, m_vector, select_vector, pk_IDP);
+
+    data_point += add_len;
+    add_len += filling_selected_m_vector_into_buffer(data_point, m_vector, select_vector, pk_IDP);
 
     tmp_header->length = add_len;
 
-    //
+    // 
+    // printf("[INFO] send length is %d\n", add_len + HEADER_LEN);
+    
     return add_len + HEADER_LEN;
 }
 
