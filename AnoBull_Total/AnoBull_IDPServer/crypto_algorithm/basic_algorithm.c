@@ -263,7 +263,7 @@ struct m_vector_and_selector_struct* get_the_m_vector_and_selector_vector(char* 
     int tmp_len = 0;
     element_t* tmp_pointer = NULL;
 
-    printf("[DEBUG DEBUG WHAT HAPPENED?]");
+    // printf("[DEBUG DEBUG WHAT HAPPENED?]");
     for(int i=0; i<pk_IDP->total_num_of_h_i; i++) {
         tmp_len = 0;
         // True代表有数据，想要把数据展现出来
@@ -329,7 +329,7 @@ int RP_verify(struct sigma* signature, element_t* m_vector, char* select_vector,
 
     element_mul(R1, R1, res);
     
-    /*
+    
     // 恢复R2
     element_set1(R2);
     // data 总是从 下标1开始
@@ -441,6 +441,6 @@ int RP_verify(struct sigma* signature, element_t* m_vector, char* select_vector,
 
     free(data_buffer);
 
-    */
+    
     return 1;
 }

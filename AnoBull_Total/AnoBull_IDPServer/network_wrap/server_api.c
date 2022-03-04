@@ -472,14 +472,14 @@ int process_recv(char* thread_recv_buffer, char* thread_send_buffer, int recv_le
             char** m_vector_point = &no_use;
             
             // 计算sigma时就已经出现问题了，貌似并非free的问题
-            printf("[DEBUG DEBUG] begin get the sigma\n");
+            // printf("[DEBUG DEBUG] begin get the sigma\n");
             struct sigma* recvived_signature = sigma_from_bytes(recv_buffer, 0, pk_IDP, m_vector_point);
-            printf("[DEBUG DEBUG] end get the sigma\n");
+            // printf("[DEBUG DEBUG] end get the sigma\n");
 
             // 真的让人头疼。。
             // m_vector_point 已经被自动重定向了
             // 成功搞到了m_vector
-            
+            // printf("m_vector_info is %s \n", *m_vector_point);
             // element_t* m_vector = get_the_m_vector(*m_vector_point, pk_IDP);
             // char* selector_vector = get_selector_vector(m_vector, pk_IDP);
             struct m_vector_and_selector_struct* added_struct = get_the_m_vector_and_selector_vector(*m_vector_point, pk_IDP);

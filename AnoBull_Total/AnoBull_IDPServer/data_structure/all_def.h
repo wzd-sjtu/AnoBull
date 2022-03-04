@@ -12,5 +12,6 @@
 // 这里进行了复杂的头文件包含
 #include "sigma_def.h"
 #include "extra_struct_def.h"
+#include "sigma_store_def.h"
 
 #endif

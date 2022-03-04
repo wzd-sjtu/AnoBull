@@ -409,7 +409,7 @@ struct sigma* sigma_from_bytes(char* data_buffer, int length, struct public_key_
     element_init_G1(res_sigma->A_plus, *pk_IDP->pair);
     element_init_G1(res_sigma->A_ba, *pk_IDP->pair);
     element_init_G1(res_sigma->d, *pk_IDP->pair);
-    element_init_G1(res_sigma->c, *pk_IDP->pair);
+    element_init_Zr(res_sigma->c, *pk_IDP->pair);
 
     element_init_Zr(res_sigma->z_x, *pk_IDP->pair);
     element_init_Zr(res_sigma->z_r, *pk_IDP->pair);
@@ -418,6 +418,7 @@ struct sigma* sigma_from_bytes(char* data_buffer, int length, struct public_key_
 
     int N = pk_IDP->total_num_of_h_i;
 
+    // 这里的确进行了远程赋值
     res_sigma->z_i_hidden = (element_t*)malloc(N*sizeof(element_t));
     for(int i=0; i<N; i++) {
         element_init_Zr(res_sigma->z_i_hidden[i], *pk_IDP->pair);
@@ -434,6 +435,169 @@ struct sigma* sigma_from_bytes(char* data_buffer, int length, struct public_key_
     tmp_buffer += tmp_len;
 
     tmp_len = element_from_bytes(res_sigma->d, tmp_buffer);
+    tmp_buffer += tmp_len;
+
+    tmp_len = element_from_bytes(res_sigma->c, tmp_buffer);
+    tmp_buffer += tmp_len;
+
+    tmp_len = element_from_bytes(res_sigma->z_x, tmp_buffer);
+    tmp_buffer += tmp_len;
+
+    tmp_len = element_from_bytes(res_sigma->z_r, tmp_buffer);
+    tmp_buffer += tmp_len;
+
+    tmp_len = element_from_bytes(res_sigma->z_alpha, tmp_buffer);
+    tmp_buffer += tmp_len;
+
+    tmp_len = element_from_bytes(res_sigma->z_beta, tmp_buffer);
+    tmp_buffer += tmp_len;
+
+    
+    for(int i=0; i<N; i++) {
+        tmp_len = element_from_bytes(res_sigma->z_i_hidden[i], tmp_buffer);
+        tmp_buffer += tmp_len;
+    }
+    
+    // 希望二级指针原地改变
+    // 成功get到了sigma，为后文的处理打下基础
+    *m_vector_point = tmp_buffer;
+
+    return res_sigma;
+}
+
+int compare_sigma(struct sigma* var1, struct sigma* var2) {
+    if(element_cmp(var1->A_plus, var2->A_plus) != 0) {
+        printf("[ERROR] A_plus wrong!\n");
+        return -1;
+    }
+    else if(element_cmp(var1->A_ba, var2->A_ba) != 0) {
+        printf("[ERROR] A_ba wrong!\n");
+    }
+    else if(element_cmp(var1->d, var2->d) != 0) {
+        printf("[ERROR] d wrong!\n");
+    }
+    else if(element_cmp(var1->c, var2->c) != 0) {
+        printf("[ERROR] c wrong!\n");
+    }
+    else if(element_cmp(var1->z_x, var2->z_x) != 0) {
+        printf("[ERROR] z_x wrong!\n");
+    }
+    else if(element_cmp(var1->z_r, var2->z_r) != 0) {
+        printf("[ERROR] z_r wrong!\n");
+    }
+    else if(element_cmp(var1->z_alpha, var2->z_alpha) != 0) {
+        printf("[ERROR] z_alpha wrong!\n");
+    }
+    else if(element_cmp(var1->z_beta, var2->z_beta) != 0) {
+        printf("[ERROR] z_beta wrong!\n");
+    }
+
+    return 1;
+}
+
+
+
+// to and from are both needed.
+int sigma_store_to_bytes(struct sigma_store* will_send_sigma, char* data_buffer, int data_len_limit, struct public_key_IDP* pk_IDP) {
+    // another convert function
+    // which is always complex for me to build it.
+    int tmp_store_len = 0;
+    int total_len = 0;
+
+    char* tmp_buffer = data_buffer;
+    tmp_store_len = element_to_bytes(data_buffer, will_send_sigma->A_plus);
+    total_len += tmp_store_len;
+    
+    data_buffer += tmp_store_len;
+    tmp_store_len = element_to_bytes(data_buffer, will_send_sigma->A_ba);
+    total_len += tmp_store_len;
+
+    data_buffer += tmp_store_len;
+    tmp_store_len = element_to_bytes(data_buffer, will_send_sigma->d);
+    total_len += tmp_store_len;
+
+
+    data_buffer += tmp_store_len;
+    tmp_store_len = element_to_bytes(data_buffer, will_send_sigma->R2);
+    total_len += tmp_store_len;
+
+
+    data_buffer += tmp_store_len;
+    tmp_store_len = element_to_bytes(data_buffer, will_send_sigma->c);
+    total_len += tmp_store_len;
+
+    data_buffer += tmp_store_len;
+    tmp_store_len = element_to_bytes(data_buffer, will_send_sigma->z_x);
+    total_len += tmp_store_len;
+
+    data_buffer += tmp_store_len;
+    tmp_store_len = element_to_bytes(data_buffer, will_send_sigma->z_r);
+    total_len += tmp_store_len;
+
+    data_buffer += tmp_store_len;
+    tmp_store_len = element_to_bytes(data_buffer, will_send_sigma->z_alpha);
+    total_len += tmp_store_len;
+
+    data_buffer += tmp_store_len;
+    tmp_store_len = element_to_bytes(data_buffer, will_send_sigma->z_beta);
+    total_len += tmp_store_len;
+
+    int N = pk_IDP->total_num_of_h_i;
+    for(int i=0; i<N; i++) {
+        data_buffer += tmp_store_len;
+        tmp_store_len = element_to_bytes(data_buffer, will_send_sigma->z_i_hidden[i]);
+        total_len += tmp_store_len;
+    }
+
+    // 最终完成整个数据结构的存储
+    return total_len;
+}
+
+
+struct sigma_store* sigma_store_from_bytes(char* data_buffer, int length, struct public_key_IDP* pk_IDP, char** m_vector_point) {
+    // another convert function
+    // which is always complex for me to build it.
+
+    // 进行了无脑的数组串的转化与生成
+    // 现在就是玄学，真实吐了
+    struct sigma_store* res_sigma = (struct sigma_store*)malloc(sizeof(struct sigma_store));
+
+    
+    
+    element_init_G1(res_sigma->A_plus, *pk_IDP->pair);
+    element_init_G1(res_sigma->A_ba, *pk_IDP->pair);
+    element_init_G1(res_sigma->d, *pk_IDP->pair);
+    element_init_G1(res_sigma->R2, *pk_IDP->pair);
+
+    element_init_Zr(res_sigma->c, *pk_IDP->pair);
+
+    element_init_Zr(res_sigma->z_x, *pk_IDP->pair);
+    element_init_Zr(res_sigma->z_r, *pk_IDP->pair);
+    element_init_Zr(res_sigma->z_alpha, *pk_IDP->pair);
+    element_init_Zr(res_sigma->z_beta, *pk_IDP->pair);
+
+    int N = pk_IDP->total_num_of_h_i;
+
+    // 这里的确进行了远程赋值
+    res_sigma->z_i_hidden = (element_t*)malloc(N*sizeof(element_t));
+    for(int i=0; i<N; i++) {
+        element_init_Zr(res_sigma->z_i_hidden[i], *pk_IDP->pair);
+    }
+
+    char* tmp_buffer = data_buffer;
+    int tmp_len = 0;
+
+    
+    tmp_len = element_from_bytes(res_sigma->A_plus, tmp_buffer);
+    tmp_buffer += tmp_len;
+
+    tmp_len = element_from_bytes(res_sigma->A_ba, tmp_buffer);
+    tmp_buffer += tmp_len;
+
+    tmp_len = element_from_bytes(res_sigma->d, tmp_buffer);
+    tmp_buffer += tmp_len;
+
+    tmp_len = element_from_bytes(res_sigma->R2, tmp_buffer);
     tmp_buffer += tmp_len;
 
     tmp_len = element_from_bytes(res_sigma->c, tmp_buffer);

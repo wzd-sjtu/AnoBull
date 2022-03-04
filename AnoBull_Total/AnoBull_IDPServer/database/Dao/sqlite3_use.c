@@ -275,3 +275,8 @@ int create_table_sigma_c(struct list* user_info_list) {
 
 	return ret;
 }
+
+// 根据用户名字进行对应的表格创建，从而提升效率efficiency
+int create_table_sigma_store(struct list* user_info_list) {
+
+}
