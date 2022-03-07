@@ -300,7 +300,8 @@ struct m_vector_and_selector_struct* get_the_m_vector_and_selector_vector(char* 
 }
 
 
-int RP_verify(struct sigma* signature, element_t* m_vector, char* select_vector, \
+// 在RP_verify时，记得返回中间的一个缓存变量
+element_t* RP_verify(struct sigma* signature, element_t* m_vector, char* select_vector, \
     struct public_key_IDP* pk_IDP) {
     // 恢复出R1和R2
 
@@ -430,7 +431,9 @@ int RP_verify(struct sigma* signature, element_t* m_vector, char* select_vector,
     // 删除中间变量
     
     element_clear(R1);
-    element_clear(R2);
+
+    // R2是需要缓存的内容，记得不要清理掉
+    // element_clear(R2);
     element_clear(res);
     element_clear(exponent);
 
@@ -441,6 +444,46 @@ int RP_verify(struct sigma* signature, element_t* m_vector, char* select_vector,
 
     free(data_buffer);
 
-    
-    return 1;
+    // 返回R2的地址即可
+    return &R2;
+}
+
+struct sigma_store* init_sigma_store(struct sigma* recvived_signature, element_t* R2_will_cache, struct public_key_IDP* pk_IDP) {
+    struct sigma_store* cached_signature = (struct sigma_store*)malloc(sizeof(struct sigma_store));
+
+    element_init_G1(cached_signature->A_plus, *pk_IDP->pair);
+    element_init_G1(cached_signature->A_ba, *pk_IDP->pair);
+    element_init_G1(cached_signature->d, *pk_IDP->pair);
+    element_init_G1(cached_signature->R2, *pk_IDP->pair);
+
+    element_init_Zr(cached_signature->c, *pk_IDP->pair);
+    element_init_Zr(cached_signature->z_x, *pk_IDP->pair);
+    element_init_Zr(cached_signature->z_r, *pk_IDP->pair);
+    element_init_Zr(cached_signature->z_alpha, *pk_IDP->pair);
+    element_init_Zr(cached_signature->z_beta, *pk_IDP->pair);
+
+    int N = pk_IDP->total_num_of_h_i;
+    for(int i=0; i<N; i++) {
+        element_init_Zr(cached_signature->z_i_hidden[i], *pk_IDP->pair);
+    }
+
+    // 之后进行赋值即可
+    element_set(cached_signature->A_plus, recvived_signature->A_plus);
+    element_set(cached_signature->A_ba, recvived_signature->A_ba);
+    element_set(cached_signature->d, recvived_signature->d);
+    element_set(cached_signature->R2, *R2_will_cache);
+
+    element_set(cached_signature->c, recvived_signature->c);
+    element_set(cached_signature->z_x, recvived_signature->z_x);
+    element_set(cached_signature->z_r, recvived_signature->z_r);
+    element_set(cached_signature->z_alpha, recvived_signature->z_alpha);
+    element_set(cached_signature->z_beta, recvived_signature->z_beta);
+
+    for(int i=0; i>N; i++) {
+        element_set(cached_signature->z_i_hidden[i], recvived_signature->z_i_hidden[i]);
+    }
+    // 完成上文处理后，还需要存入一个selector vector，当做冗余信息存储在数据库里面即可
+    // 还需要补充一个selector_vector，这个表格不需要添加别的信息了
+
+    return cached_signature;
 }

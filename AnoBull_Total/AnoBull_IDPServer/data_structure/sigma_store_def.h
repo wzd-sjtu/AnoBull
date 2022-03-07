@@ -29,10 +29,6 @@ struct sigma_store {
 
     // 这个z也全都要存储的
     element_t* z_i_hidden;
-
-    //////// 重要的中间变量，连乘上套了一个r次方 ////////
-    // no need of middle res here.
-    // element_t middle_res;
 };
 
 #endif

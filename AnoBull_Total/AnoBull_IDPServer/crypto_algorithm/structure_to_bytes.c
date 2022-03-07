@@ -496,6 +496,8 @@ int compare_sigma(struct sigma* var1, struct sigma* var2) {
 }
 
 
+// for sigma_store function
+// how to use it in high speed?
 
 // to and from are both needed.
 int sigma_store_to_bytes(struct sigma_store* will_send_sigma, char* data_buffer, int data_len_limit, struct public_key_IDP* pk_IDP) {

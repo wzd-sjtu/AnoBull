@@ -490,8 +490,22 @@ int process_recv(char* thread_recv_buffer, char* thread_send_buffer, int recv_le
             char* selector_vector = added_struct->selector_vector;
 
             // 下面正式进行验证
-            RP_verify(recvived_signature, m_vector, selector_vector, pk_IDP);
+            // 在进行RP_verify时，需要生成暂时的中间变量，记得把中间变量保存下来哦
+            element_t* R2_will_cache = RP_verify(recvived_signature, m_vector, selector_vector, pk_IDP);
             
+            // 下面再进行数据的持久化
+            // 这让人暂时是非常无语ing的啦
+
+            // 进行数据持久化存储
+            // 每一个数据结构都应当有自己的接口，从而尽可能来提升效率
+            struct sigma_store* sigma_store_cache = init_sigma_store(recvived_signature, R2_will_cache, pk_IDP);
+
+            // 完成内容初始化，下面转换为数据库的存储方式
+            // 存储到对应的数据库里面，从而提升效率
+            // 当上面这一步完成后，就可以进入正式的程序测试阶段了
+            
+            
+
             send_header->state = 5;
             send_header->length = strlen(send_buffer) + 1;
 
@@ -503,6 +517,9 @@ int process_recv(char* thread_recv_buffer, char* thread_send_buffer, int recv_le
             // 输入不合理，表示失败了
             printf("invalud document\n");
             now_state = -1;
+
+            // 对于所有生成的information，进行对应的处理即可完成
+            
         }
     }
     // 上文send完之后，将state归零or归为-1

@@ -31,6 +31,9 @@ struct m_vector_and_selector_struct* get_the_m_vector_and_selector_vector(char* 
 char* get_selector_vector(element_t* m_vector, struct public_key_IDP* pk_IDP);
 
 // 对签名的合理性进行验证
-int RP_verify(struct sigma* signature, element_t* m_vector, char* select_vector, \
+// 需要把中间缓存的一个R2返回出来，从而为后文的别的处理打下基础
+element_t* RP_verify(struct sigma* signature, element_t* m_vector, char* select_vector, \
     struct public_key_IDP* pk_IDP);
+
+struct sigma_store* init_sigma_store(struct sigma* recvived_signature, element_t* R2_will_cache, struct public_key_IDP* pk_IDP);
 #endif

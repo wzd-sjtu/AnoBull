@@ -119,6 +119,7 @@ int main() {
 
 
     close(sockfd);
+    // 这里是已经完成了所有information的获取和获得了
 
     while(1) {
 
