@@ -293,6 +293,43 @@ int store_user_info(struct list* user_info_list) {
 }
 
 
+void store_sigma_store(struct sigma_store* sigma_store_cache, element_t* m_vector, char* selector_vector, struct public_key_IDP* pk_IDP) {
+    // 下面是对公钥进行合理处理的logic
+    int N = pk_IDP->total_num_of_h_i;
+    int hidden_num = 0;
+    for(int i=0; i<N; i++) {
+        if(is_hidden(selector_vector, i)) {
+            hidden_num++;
+        }
+    }
+    struct list* sigma_store_list = init_list();
+
+    char* data_buffer[DATA_LEN] = {0};
+    // 向足够大的缓冲区填入信息的啦
+    
+    // 并不包括'\0'
+    int len_of_sigma_store = sigma_store_to_bytes(sigma_store_cache, data_buffer, DATA_LEN, pk_IDP);
+    data_buffer[len_of_sigma_store] = '\0';
+    
+    char* sigma_store_pointer = (char*)malloc(len_of_sigma_store + 1);
+    strcpy(sigma_store_pointer, data_buffer);
+
+    // 需要进行一点点logic的复杂处理，真的是令人头疼
+    char* m_vector_bytes = m_vector_to_bytes(m_vector, pk_IDP->total_num_of_h_i);
+    char* selector_vector_bytes = selector_vector_to_bytes(selector_vector, pk_IDP->total_num_of_h_i);
+
+    // 最后进行对应的insert即可
+    
+    push_back(NULL, sigma_store_pointer, NULL, sigma_store_list);
+    push_back(NULL, m_vector_bytes, NULL, sigma_store_list);
+    push_back(NULL, selector_vector_bytes, NULL, sigma_store_list);
+
+    // 完成push后，调用数据库处理函数即可
+    // 进行诸多合理的消息处理，完成信息传送了
+    insert_sigma_store(sigma_store_list, hidden_num, pk_IDP);
+}   
+
+
 int process_recv(char* thread_recv_buffer, char* thread_send_buffer, int recv_length, void** para_transmit) {
     // 指针强制类型转换
     struct protocol_header* recv_header = (struct protocol_header*)thread_recv_buffer;
@@ -488,7 +525,7 @@ int process_recv(char* thread_recv_buffer, char* thread_send_buffer, int recv_le
 
             element_t* m_vector = added_struct->m_vector;
             char* selector_vector = added_struct->selector_vector;
-
+            
             // 下面正式进行验证
             // 在进行RP_verify时，需要生成暂时的中间变量，记得把中间变量保存下来哦
             element_t* R2_will_cache = RP_verify(recvived_signature, m_vector, selector_vector, pk_IDP);
@@ -498,13 +535,17 @@ int process_recv(char* thread_recv_buffer, char* thread_send_buffer, int recv_le
 
             // 进行数据持久化存储
             // 每一个数据结构都应当有自己的接口，从而尽可能来提升效率
+            
             struct sigma_store* sigma_store_cache = init_sigma_store(recvived_signature, R2_will_cache, pk_IDP);
 
+            // printf("[ERROR ERROR]I don't konw what happened!\n");
             // 完成内容初始化，下面转换为数据库的存储方式
             // 存储到对应的数据库里面，从而提升效率
             // 当上面这一步完成后，就可以进入正式的程序测试阶段了
             
-            
+            // 此处进行数据可持久化处理
+            // 进行合理的数据可持久化处理喽
+            store_sigma_store(sigma_store_cache, m_vector, selector_vector, pk_IDP);
 
             send_header->state = 5;
             send_header->length = strlen(send_buffer) + 1;

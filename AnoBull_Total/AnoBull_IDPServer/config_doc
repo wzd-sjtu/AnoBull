@@ -1,7 +1,7 @@
 # 这个是配置文件，专门用于配置相关参数
 Elliptic_Curve_Selection = D224
 
-IP_address = 192.168.1.86
+IP_address = 192.168.50.10
 
 port = 8889
 

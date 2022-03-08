@@ -308,6 +308,7 @@ element_t* RP_verify(struct sigma* signature, element_t* m_vector, char* select_
     
     element_t R1;
     element_init_G1(R1, *pk_IDP->pair);
+    // 局部变量会被消耗掉，不可按照上述处理
     element_t R2;
     element_init_G1(R2, *pk_IDP->pair);
 
@@ -445,11 +446,19 @@ element_t* RP_verify(struct sigma* signature, element_t* m_vector, char* select_
     free(data_buffer);
 
     // 返回R2的地址即可
-    return &R2;
+    // 局部变量返回时，会自动进行释放
+    element_t* R2_replace = (element_t*)malloc(sizeof(element_t));
+    element_init_G1(*R2_replace, *pk_IDP->pair);
+    element_set(*R2_replace, R2);
+    element_clear(R2);
+    return R2_replace;
 }
 
 struct sigma_store* init_sigma_store(struct sigma* recvived_signature, element_t* R2_will_cache, struct public_key_IDP* pk_IDP) {
     struct sigma_store* cached_signature = (struct sigma_store*)malloc(sizeof(struct sigma_store));
+    int N = pk_IDP->total_num_of_h_i;
+    // 记得进行空间初始化
+    cached_signature->z_i_hidden = (element_t*)malloc(N * sizeof(element_t));
 
     element_init_G1(cached_signature->A_plus, *pk_IDP->pair);
     element_init_G1(cached_signature->A_ba, *pk_IDP->pair);
@@ -462,7 +471,7 @@ struct sigma_store* init_sigma_store(struct sigma* recvived_signature, element_t
     element_init_Zr(cached_signature->z_alpha, *pk_IDP->pair);
     element_init_Zr(cached_signature->z_beta, *pk_IDP->pair);
 
-    int N = pk_IDP->total_num_of_h_i;
+    
     for(int i=0; i<N; i++) {
         element_init_Zr(cached_signature->z_i_hidden[i], *pk_IDP->pair);
     }
@@ -485,5 +494,6 @@ struct sigma_store* init_sigma_store(struct sigma* recvived_signature, element_t
     // 完成上文处理后，还需要存入一个selector vector，当做冗余信息存储在数据库里面即可
     // 还需要补充一个selector_vector，这个表格不需要添加别的信息了
 
+    // 需要存储的info存入后，可以再一次进行别的处理啦！
     return cached_signature;
 }
